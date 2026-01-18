@@ -32,6 +32,7 @@ func (service *ClinicService) RegisterClinic(ctx context.Context, ownerID string
 	//first convert ownerID to proper mongodb id
 	ownerMongoDBID, err := primitive.ObjectIDFromHex(string(ownerID))
 	if err != nil {
+		fmt.Print(err)
 		return utils.ReturnAppError(err, 500, "Unable TO Register CLinic", "Server Error")
 	}
 
@@ -43,16 +44,18 @@ func (service *ClinicService) RegisterClinic(ctx context.Context, ownerID string
 
 	//first do validation
 	validationErr := validators.ValidateClinicDetails(&clinicDetails)
-	if validationErr != nil {
+	if len(validationErr) != 0 {
 		return utils.ReturnAppError(validationErr, 400, "Registration failed", "Invalid Details")
 	}
 
 	// set default values
 	clinicDetails.RegistrationDate = time.Now().UTC()
 	clinicDetails.Wallet = primitive.NilObjectID
+	clinicDetails.ID = primitive.NewObjectID()
 	clinicDetails.Doctors = nil
 	registrationErr := service.Repo.RegisterClinic(ctx, ownerMongoDBID, clinicDetails)
 	if registrationErr != nil {
+		fmt.Print(registrationErr)
 		return utils.ReturnAppError(registrationErr, 500, "Registration Failed", "Unknown reason")
 	}
 
@@ -98,11 +101,21 @@ func (service *ClinicService) RegisterClinicOwner(ctx context.Context, ownerDeta
 
 }
 
-func (service *ClinicService) SearchClinic(ctx context.Context, clinicName string) ([]models.Clinic, *structs.IAppError) {
-	clinics, err := service.Repo.SearchClinic(ctx, bson.M{"name": clinicName})
+func (service *ClinicService) SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError) {
+	clinics, err := service.Repo.SearchClinic(ctx, filter)
 	if err != nil {
 		return nil, utils.ReturnAppError(err, 500, "Unable To Fetch Clinic details", "Server Error")
 	}
 
 	return clinics, nil
+}
+
+func (service *ClinicService) SearchOwner(ctx context.Context, filter bson.M) ([]models.Owner, *structs.IAppError) {
+	owner, err := service.Repo.GetOwnerDetails(ctx, filter)
+	if err != nil {
+		fmt.Print(err, owner)
+		return nil, utils.ReturnAppError(err, 500, "Unable To Fetch Owner details", "Server Error")
+	}
+
+	return owner, nil
 }

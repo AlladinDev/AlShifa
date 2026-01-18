@@ -11,6 +11,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Controller struct {
@@ -45,12 +48,24 @@ func (controller *Controller) RegisterClinic(res http.ResponseWriter, req *http.
 
 	//here validate clinic details
 	validationErrors := validators.ValidateClinicDetails(&clinicRegistrationDetails.Clinic)
-	if validationErrors != nil {
-		_ = utils.WriteResponse(res, utils.ReturnAppError(validationErrors, 400, "Invalid Details", "Invalid Details"))
+	if len(validationErrors) != 0 {
+		fmt.Print(validationErrors)
+		_ = utils.WriteResponse(res, utils.ReturnAppError(validationErrors, 400, "Invalid Details", "Validation Failed"))
 		return
 	}
 
-	response := controller.Service.RegisterClinic(ctx, clinicRegistrationDetails.OwnerID, clinicRegistrationDetails.Clinic)
+	registrationErr := controller.Service.RegisterClinic(ctx, clinicRegistrationDetails.OwnerID, clinicRegistrationDetails.Clinic)
+	if registrationErr != nil {
+		_ = utils.WriteResponse(res, registrationErr)
+		return
+	}
+
+	response := structs.IAppSuccess{
+		Message:    "Clinic Registered Successfully",
+		Data:       nil,
+		StatusCode: 201,
+	}
+
 	_ = utils.WriteResponse(res, response)
 }
 
@@ -75,7 +90,6 @@ func (controller *Controller) RegisterOwner(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	fmt.Print("reached here")
 	if err := controller.Service.RegisterClinicOwner(ctx, ownerDetails); err != nil {
 		_ = utils.WriteResponse(res, err)
 		return
@@ -88,4 +102,87 @@ func (controller *Controller) RegisterOwner(res http.ResponseWriter, req *http.R
 	}
 
 	_ = utils.WriteResponse(res, response)
+}
+
+func (controller *Controller) SearchClinic(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+
+	// Parse query parameters
+	params := req.URL.Query()
+
+	// Initialize empty filter
+	filters := bson.M{}
+
+	// Iterate over query params
+	for key, values := range params {
+		if len(values) == 0 {
+			continue
+		}
+		value := values[0] // take first value for simplicity
+
+		// Special handling for clinicId
+		if key == "id" {
+			objID, err := primitive.ObjectIDFromHex(value)
+			if err != nil {
+				_ = utils.WriteResponse(res, utils.ReturnAppError(err, 400, "Unable To Fetch Clinic Details", "Server Error"))
+				return
+			}
+			filters["_id"] = objID
+		} else {
+			// Treat all other fields as string match
+			filters[key] = value
+		}
+	}
+
+	// Call your service with filters
+	clinics, err := controller.Service.SearchClinic(ctx, filters)
+	if err != nil {
+		_ = utils.WriteResponse(res, err)
+		return
+	}
+
+	utils.WriteResponse(res, utils.ReturnAppSuccess(200, "Fetched Successfully", clinics))
+}
+
+func (controller *Controller) SearchOwner(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+
+	// Parse query parameters
+	params := req.URL.Query()
+
+	// Initialize empty filter
+	filters := bson.M{}
+
+	// Iterate over query params
+	for key, values := range params {
+		if len(values) == 0 {
+			continue
+		}
+		value := values[0] // take first value for simplicity
+
+		// Special handling for clinicId
+		if key == "_id" {
+			objID, err := primitive.ObjectIDFromHex(value)
+			if err != nil {
+				_ = utils.WriteResponse(res, utils.ReturnAppError(err, 400, "Unable To Fetch Owner Details", "Server Error"))
+				return
+			}
+			filters["_id"] = objID
+		} else {
+			// Treat all other fields as string match
+			filters[key] = value
+		}
+	}
+
+	// Call your service with filters
+	fmt.Print(params)
+	owner, err := controller.Service.SearchOwner(ctx, filters)
+	if err != nil {
+		_ = utils.WriteResponse(res, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, utils.ReturnAppSuccess(200, "Fetched Successfully", owner))
 }

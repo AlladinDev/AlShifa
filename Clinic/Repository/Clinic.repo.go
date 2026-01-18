@@ -34,16 +34,13 @@ func (r *Repo) RegisterClinicOwner(ctx context.Context, owner models.Owner) erro
 	return err
 }
 
-// // RegisterClinic inserts a clinic (Owner document) into the database.
-// func (r *Repo) RegisterClinic(ctx context.Context, ownerID primitive.ObjectID, clinic models.Clinic) error {
-// 	_, err := r.DB.Collection("Clinic").InsertOne(ctx, clinic)
-// 	return err
-// }
 func (r *Repo) RegisterClinic(
 	ctx context.Context,
 	ownerID primitive.ObjectID,
 	clinic models.Clinic,
 ) error {
+	//add ownerId  to clinic field
+	clinic.Owner = ownerID
 
 	session, err := r.DB.Client().StartSession()
 	if err != nil {
@@ -63,9 +60,14 @@ func (r *Repo) RegisterClinic(
 		// 2️⃣ Update owner with clinic ID
 		_, err = r.DB.Collection("Owner").UpdateOne(
 			sessCtx,
-			bson.M{"_id": ownerID},
 			bson.M{
-				"clinic": clinicID,
+				"_id": ownerID,
+			},
+
+			bson.D{
+				{Key: "$set", Value: bson.D{
+					{Key: "clinic", Value: clinicID},
+				}},
 			},
 		)
 		if err != nil {
@@ -76,28 +78,59 @@ func (r *Repo) RegisterClinic(
 	}
 
 	_, err = session.WithTransaction(ctx, callback)
+	fmt.Print(err)
 	return err
 }
 
-func (r *Repo) GetOwnerDetails(ctx context.Context, filter bson.M) (*models.Owner, error) {
-	result := r.DB.Collection("Owner").FindOne(ctx, filter)
-	var owner models.Owner
+func (r *Repo) GetOwnerDetails(ctx context.Context, filter bson.M) ([]models.Owner, error) {
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "Clinic"},
+				{Key: "localField", Value: "clinic"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "clinicDetails"},
+			}}},
+		bson.D{{Key: "$unwind", Value: bson.M{
+			"path":                       "$clinicDetails",
+			"preserveNullAndEmptyArrays": true,
+		}},
+		},
+	}
+	cursor, err := r.DB.Collection("Owner").Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
 
-	if err := result.Decode(&owner); err != nil {
+	var owners []models.Owner
+
+	if err := cursor.All(ctx, &owners); err != nil {
 		return nil, err
 	}
 
-	return &owner, nil
+	return owners, nil
 }
 
 func (r *Repo) SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic, error) {
 	pipeline := mongo.Pipeline{
-		{{Key: "$match", Value: filter}}, // <-- filter can be anything
-		{{Key: "$lookup", Value: bson.D{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Doctor"},
 			{Key: "localField", Value: "doctors"},
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "doctorDetails"},
+		}}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Owner"},
+			{Key: "localField", Value: "owner"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "ownerDetails"},
+		}}},
+		bson.D{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$ownerDetails"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
 		}}},
 	}
 

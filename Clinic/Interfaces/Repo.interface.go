@@ -13,6 +13,6 @@ import (
 type IRepository interface {
 	RegisterClinic(ctx context.Context, ownerID primitive.ObjectID, clinic models.Clinic) error
 	RegisterClinicOwner(ctx context.Context, owner models.Owner) error
-	GetOwnerDetails(ctx context.Context, filter bson.M) (*models.Owner, error)
+	GetOwnerDetails(ctx context.Context, filter bson.M) ([]models.Owner, error)
 	SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic, error)
 }

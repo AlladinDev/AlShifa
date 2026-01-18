@@ -1,7 +1,9 @@
 // Package utils provides utility functions and types for the AlShifa application.
 package utils
 
-import structs "AlShifa/Structs"
+import (
+	structs "AlShifa/Structs"
+)
 
 func ReturnAppError(
 	err any,
@@ -9,7 +11,7 @@ func ReturnAppError(
 	message string,
 	reason string,
 ) *structs.IAppError {
-	
+	//fmt.Print("err received is", err)
 	return &structs.IAppError{
 		Message:    message,
 		StatusCode: statusCode,

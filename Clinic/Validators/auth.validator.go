@@ -3,9 +3,7 @@ package validators
 
 import (
 	"AlShifa/Clinic/models"
-	"fmt"
 	"strings"
-	"time"
 )
 
 const (
@@ -177,74 +175,6 @@ func lenInt64Digits(n int64) int {
 	return count
 }
 
-// func ValidateClinicDetails(clinic *models.Clinic, errors *ClinicRegistrationValidationErrors) {
-
-// 	if clinic == nil {
-// 		errors.ClinicDetailsError["clinic"] = "clinic details are required"
-// 		return
-// 	}
-
-// 	// Name
-// 	name := strings.TrimSpace(clinic.Name)
-// 	if name == "" {
-// 		errors.ClinicDetailsError["name"] = "clinic name is required"
-// 	} else if len(name) > MaxClinicNameLength {
-// 		errors.ClinicDetailsError["name"] = "clinic name is too long"
-// 	}
-
-// 	// Address
-// 	address := strings.TrimSpace(clinic.Address)
-// 	if address == "" {
-// 		errors.ClinicDetailsError["address"] = "clinic address is required"
-// 	} else if len(address) > MaxAddressLength {
-// 		errors.ClinicDetailsError["address"] = "clinic address is too long"
-// 	}
-
-// 	// Mobile
-// 	if clinic.Mobile <= 0 || lenInt64Digits(clinic.Mobile) > MaxMobileDigits {
-// 		errors.ClinicDetailsError["mobile"] = "invalid clinic mobile number"
-// 	}
-
-// 	// Pincode
-// 	if clinic.Pincode <= 0 || clinic.Pincode < 100000 || clinic.Pincode > 999999 {
-// 		errors.ClinicDetailsError["pincode"] = "invalid pincode"
-// 	}
-
-// 	// SeasonTiming
-// 	if clinic.SeasonTimings == nil {
-// 		errors.ClinicDetailsError["seasonTimings"] = "season timing details required"
-// 	}
-
-// 	if clinic.SeasonTimings != nil {
-// 		for _, seasonDetails := range clinic.SeasonTimings {
-
-// 			if strings.TrimSpace(seasonDetails.Name) == "" {
-// 				errors.ClinicDetailsError["seasonTiming.name"] = "season name is required"
-// 			} else if len(seasonDetails.Name) > MaxSeasonNameLength {
-// 				errors.ClinicDetailsError["seasonTiming.name"] = "season name is too long"
-// 			}
-
-// 			if seasonDetails.Start.IsZero() {
-// 				errors.ClinicDetailsError["seasonTiming.start"] = "season start time is required"
-// 			}
-// 			if seasonDetails.End.IsZero() {
-// 				errors.ClinicDetailsError["seasonTiming.end"] = "season end time is required"
-// 			}
-// 			if !seasonDetails.Start.IsZero() && !seasonDetails.End.IsZero() && seasonDetails.End.Before(seasonDetails.Start) {
-// 				errors.ClinicDetailsError["seasonTiming.range"] = "season end must be after start"
-// 			}
-// 			if !seasonDetails.Start.IsZero() && seasonDetails.Start.Before(time.Now().AddDate(-10, 0, 0)) {
-// 				errors.ClinicDetailsError["seasonTiming.start"] = "season start date is too old"
-// 			}
-// 		}
-// 	}
-
-// 	if len(errors.ClinicDetailsError) == 0 {
-// 		return
-// 	}
-
-// }
-
 func ValidateClinicDetails(clinic *models.Clinic) map[string]string {
 	errors := make(map[string]string)
 
@@ -270,7 +200,7 @@ func ValidateClinicDetails(clinic *models.Clinic) map[string]string {
 	}
 
 	// Mobile
-	if clinic.Mobile <= 0 || lenInt64Digits(clinic.Mobile) > MaxMobileDigits {
+	if clinic.Mobile <= 0 || lenInt64Digits(clinic.Mobile) != MaxMobileDigits {
 		errors["mobile"] = "invalid clinic mobile number"
 	}
 
@@ -285,32 +215,33 @@ func ValidateClinicDetails(clinic *models.Clinic) map[string]string {
 		return errors
 	}
 
-	for i, season := range clinic.SeasonTimings {
-		prefix := fmt.Sprintf("seasonTimings[%d]", i)
+	//fmt.Print("season details passed are", clinic.SeasonTimings)
+	for _, season := range clinic.SeasonTimings {
+		prefix := season.Name
 
 		if strings.TrimSpace(season.Name) == "" {
-			errors[prefix+".name"] = "season name is required"
+			errors[prefix+" name"] = " season name is required"
 		} else if len(season.Name) > MaxSeasonNameLength {
-			errors[prefix+".name"] = "season name is too long"
+			errors[prefix+" name"] = " season name is too long"
 		}
 
 		if season.Start.IsZero() {
-			errors[prefix+".start"] = "season start time is required"
+			errors[prefix+" start"] = " season start time is required"
 		}
 
 		if season.End.IsZero() {
-			errors[prefix+".end"] = "season end time is required"
+			errors[prefix+" end"] = " season end time is required"
 		}
 
 		if !season.Start.IsZero() && !season.End.IsZero() &&
 			season.End.Before(season.Start) {
-			errors[prefix+".range"] = "season end must be after start"
+			errors[prefix+" range"] = " season end must be after start"
 		}
 
-		if !season.Start.IsZero() &&
-			season.Start.Before(time.Now().AddDate(-10, 0, 0)) {
-			errors[prefix+".start"] = "season start date is too old"
-		}
+		// if !season.Start.IsZero() &&
+		// 	season.Start.Before(time.Now().AddDate(-10, 0, 0)) {
+		// 	errors[prefix+" start "] = " season start date is too old"
+		// }
 	}
 
 	return errors
