@@ -25,11 +25,6 @@ func printMemUsage() {
 func main() {
 	printMemUsage()
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
 	// Do not load .env file in Railway production
 	if _, exists := os.LookupEnv("RAILWAY_ENVIRONMENT_NAME"); !exists {
 		if err := godotenv.Load(); err != nil {
