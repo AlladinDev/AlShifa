@@ -15,4 +15,6 @@ type IRepository interface {
 	RegisterClinicOwner(ctx context.Context, owner models.Owner) error
 	GetOwnerDetails(ctx context.Context, filter bson.M) ([]models.Owner, error)
 	SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic, error)
+	RegisterDoctor(ctx context.Context, doctorDetails models.Doctor) error
+	SearchDoctors(ctx context.Context, filter bson.M) ([]models.Doctor, error)
 }

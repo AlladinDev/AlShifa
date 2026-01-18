@@ -186,3 +186,84 @@ func (controller *Controller) SearchOwner(res http.ResponseWriter, req *http.Req
 
 	_ = utils.WriteResponse(res, utils.ReturnAppSuccess(200, "Fetched Successfully", owner))
 }
+
+func (controller *Controller) RegisterDoctor(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+	var doctor models.Doctor
+
+	if err := json.NewDecoder(req.Body).Decode(&doctor); err != nil {
+		_ = utils.WriteResponse(res, utils.ReturnAppError(err, 500, "Registration Failed", "Invalid Json"))
+		return
+	}
+
+	//here do validation
+	validationErrors := validators.ValidateDoctor(doctor)
+	if validationErrors != nil {
+		_ = utils.WriteResponse(res, utils.ReturnAppError(validationErrors, 400, "Registration Failed", "Invalid Details"))
+		return
+	}
+
+	if err := controller.Service.RegisterDoctor(ctx, doctor); err != nil {
+		_ = utils.WriteResponse(res, err)
+		return
+	}
+
+	//here it means doctor is successfully registered
+	_ = utils.WriteResponse(res, structs.IAppSuccess{
+		Message:    "Doctor Registered Successfully",
+		Data:       nil,
+		StatusCode: 200,
+	})
+
+}
+
+func (controller *Controller) SearchDoctor(res http.ResponseWriter, req *http.Request) {
+
+	if req.Method != "GET" {
+		_ = utils.InvalidMethodResponse("GET", res)
+		return
+	}
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+
+	// Parse query parameters
+	params := req.URL.Query()
+
+	// Initialize empty filter
+	filters := bson.M{}
+
+	// Iterate over query params
+	for key, values := range params {
+		if len(values) == 0 {
+			continue
+		}
+		value := values[0] // take first value for simplicity
+
+		// Special handling for clinicId
+		if key == "id" {
+			objID, err := primitive.ObjectIDFromHex(value)
+			if err != nil {
+				_ = utils.WriteResponse(res, utils.ReturnAppError(err, 400, "Unable To Fetch Doctors Details", "Server Error"))
+				return
+			}
+			filters["_id"] = objID
+		} else {
+			// Treat all other fields as string match
+			filters[key] = value
+		}
+	}
+
+	doctors, err := controller.Service.SearchDoctor(ctx, filters)
+	if err != nil {
+		_ = utils.WriteResponse(res, err)
+		return
+	}
+
+	utils.WriteResponse(res, structs.IAppSuccess{
+		Message:    "Successfully Fetched Details",
+		Data:       doctors,
+		StatusCode: 200,
+	})
+
+}

@@ -1,6 +1,8 @@
 // Package structs contains shared data structures used across the application.
 package structs
 
+// swagger:model ErrorResponse
+
 type IAppError struct {
 	Message    string `json:"message"`
 	StatusCode int    `json:"statusCode"`

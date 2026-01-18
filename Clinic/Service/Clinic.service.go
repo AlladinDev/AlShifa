@@ -8,11 +8,13 @@ import (
 	structs "AlShifa/Structs"
 	utils "AlShifa/Utils"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type ClinicService struct {
@@ -118,4 +120,52 @@ func (service *ClinicService) SearchOwner(ctx context.Context, filter bson.M) ([
 	}
 
 	return owner, nil
+}
+
+func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.Doctor) *structs.IAppError {
+
+	//here check if doctor exists using mobile and phoneNumber
+	existingDoctors, err := service.Repo.SearchDoctors(ctx, bson.M{
+		"$or": []bson.M{
+			{"email": doctor.Email},
+			{"mobile": doctor.Mobile},
+		},
+	})
+
+	///if error is nill check if it is of other type  and return error
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			return utils.ReturnAppError(err, 500, "Registration Failed", "Server Error")
+		}
+	}
+
+	if len(existingDoctors) > 0 {
+		return utils.ReturnAppError(errors.New("doctor already exists"), 400, "Email or Mobile Already Exists", "Duplicate Email or Mobile")
+	}
+
+	//here set the default values
+	doctor.Clinics = nil
+	doctor.Appointments = nil
+	doctor.RegistrationDate = time.Now()
+	doctor.ID = primitive.NewObjectID()
+	hashedPassword, err := utils.HashPasswordArgon2id(doctor.Password)
+	if err != nil {
+		return utils.ReturnAppError(err, 500, "Registration Failed", "Server Error")
+	}
+	doctor.Password = hashedPassword
+
+	if err := service.Repo.RegisterDoctor(ctx, doctor); err != nil {
+		return utils.ReturnAppError(err, 500, "Unable To Add Doctor", "Server Error")
+	}
+
+	return nil
+}
+
+func (service *ClinicService) SearchDoctor(ctx context.Context, filter bson.M) ([]models.Doctor, error) {
+	// //here validate filters
+	// allowedFilters := []string{"_id", "name", "mobile", "email"}
+	// for keys := range filter {
+
+	// }
+	return service.Repo.SearchDoctors(ctx, filter)
 }

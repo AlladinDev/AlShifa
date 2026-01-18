@@ -147,3 +147,86 @@ func (r *Repo) SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic
 
 	return results, nil
 }
+
+func (r *Repo) RegisterDoctor(ctx context.Context, doctorDetails models.Doctor) error {
+	_, err := r.DB.Collection("Doctor").InsertOne(ctx, doctorDetails)
+	return err
+}
+
+func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Doctor, error) {
+	pipeline := mongo.Pipeline{
+		// 1️⃣ Match doctors by filter
+		bson.D{{Key: "$match", Value: filter}},
+
+		// 2️⃣ Unwind clinics (Keep doctor even if clinics is empty/null)
+		bson.D{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$clinics"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}}},
+
+		// 3️⃣ Lookup clinic info
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Clinic"},
+			{Key: "localField", Value: "clinics.clinic"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "clinics.information"},
+		}}},
+
+		// 4️⃣ Flatten the information array (Lookup returns an array)
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "clinics.information", Value: bson.D{
+				{Key: "$arrayElemAt", Value: bson.A{"$clinics.information", 0}},
+			}},
+		}}},
+
+		// 5️⃣ Group back
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: "$_id"},
+
+			{Key: "registrationDate", Value: bson.D{{Key: "$first", Value: "$registrationDate"}}},
+			{Key: "name", Value: bson.D{{Key: "$first", Value: "$name"}}},
+			{Key: "qualifications", Value: bson.D{{Key: "$first", Value: "$qualifications"}}},
+			{Key: "address", Value: bson.D{{Key: "$first", Value: "$address"}}},
+			{Key: "email", Value: bson.D{{Key: "$first", Value: "$email"}}},
+
+			{Key: "workingAt", Value: bson.D{{Key: "$first", Value: "$workingAt"}}},
+			{Key: "mobile", Value: bson.D{{Key: "$first", Value: "$mobile"}}},
+			{Key: "appointments", Value: bson.D{{Key: "$first", Value: "$appointments"}}},
+
+			// ⭐ CRITICAL FIX: Only push to array if clinics.clinic exists
+			{Key: "clinics", Value: bson.D{
+				{Key: "$push", Value: bson.D{
+					{Key: "$cond", Value: bson.A{
+						bson.D{{Key: "$gt", Value: bson.A{"$clinics.clinic", nil}}},
+						"$clinics",
+						"$$REMOVE",
+					}},
+				}},
+			}},
+		}}},
+
+		// 6️⃣ Final Polish: If the array is empty, set the field to null
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "clinics", Value: bson.D{
+				{Key: "$cond", Value: bson.A{
+					bson.D{{Key: "$eq", Value: bson.A{bson.D{{Key: "$size", Value: "$clinics"}}, 0}}},
+					nil,
+					"$clinics",
+				}},
+			}},
+		}}},
+	}
+
+	cursor, err := r.DB.Collection("Doctor").Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var doctors []models.Doctor
+	if err := cursor.All(ctx, &doctors); err != nil {
+		return nil, err
+	}
+
+	return doctors, nil
+}

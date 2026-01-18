@@ -7,6 +7,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// swagger:model OwnerListResponse
+
 // Owner represents the owner of a clinic, including personal and clinic details.
 type Owner struct {
 	RegistrationDate time.Time          `json:"registrationDate" bson:"registrationDate"` // 24 bytes

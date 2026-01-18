@@ -246,11 +246,3 @@ func ValidateClinicDetails(clinic *models.Clinic) map[string]string {
 
 	return errors
 }
-
-// //now here write single function to handle both validation
-// func ValidateClinicRegistration(clinicDetails *models.Clinic, ownerDetails *models.Owner) *clinicRegistrationValidationErrors {
-// 	errors := ClinicRegistrationValidationErrors{}
-// 	ValidateOwnerDetails(ownerDetails, &errors)
-// 	ValidateClinicDetails(clinicDetails, &errors)
-// 	return &errors
-// }
