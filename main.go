@@ -30,6 +30,12 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
+	// Do not load .env file in Railway production
+	if _, exists := os.LookupEnv("RAILWAY_ENVIRONMENT_NAME"); !exists {
+		if err := godotenv.Load(); err != nil {
+			log.Fatal("error loading .env file:", err)
+		}
+	}
 	port := os.Getenv("PORT")
 
 	//call monogodb connect function
