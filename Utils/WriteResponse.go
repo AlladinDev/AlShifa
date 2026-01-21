@@ -6,14 +6,15 @@ import (
 	"net/http"
 )
 
-func WriteResponse(res http.ResponseWriter, response any) error {
+func WriteResponse(res http.ResponseWriter, status int, response any) error {
+	res.WriteHeader(int(status))
 	return json.NewEncoder(res).Encode(response)
 }
 func InvalidMethodResponse(methodName string, res http.ResponseWriter) error {
 
-	return WriteResponse(res, structs.IAppError{
+	return WriteResponse(res, http.StatusMethodNotAllowed, structs.IAppError{
 		Message:    "Only " + methodName + " Requests Are Allowed",
-		StatusCode: 400,
+		StatusCode: http.StatusMethodNotAllowed,
 		ErrorObj:   nil,
 	})
 }

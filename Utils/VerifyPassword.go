@@ -13,20 +13,31 @@ import (
 // VerifyPasswordArgon2id verifies a password against an Argon2id hash
 func VerifyPasswordArgon2id(password, encodedHash string) (bool, error) {
 	parts := strings.Split(encodedHash, "$")
-	if len(parts) != 6 {
+
+	// Remove optional leading $
+	if parts[0] == "" {
+		parts = parts[1:]
+	}
+
+	if len(parts) != 5 {
 		return false, errors.New("invalid hash format")
 	}
 
-	if parts[1] != "argon2id" {
+	if parts[0] != "argon2id" {
 		return false, errors.New("not an argon2id hash")
+	}
+
+	if parts[1] != "v=19" {
+		return false, errors.New("unsupported argon2 version")
 	}
 
 	var memory uint32
 	var time uint32
 	var threads uint8
 
+	// ✅ THIS IS THE FIX
 	_, err := fmt.Sscanf(
-		parts[3],
+		parts[2],
 		"m=%d,t=%d,p=%d",
 		&memory,
 		&time,
@@ -36,12 +47,12 @@ func VerifyPasswordArgon2id(password, encodedHash string) (bool, error) {
 		return false, err
 	}
 
-	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
+	salt, err := base64.RawStdEncoding.DecodeString(parts[3])
 	if err != nil {
 		return false, err
 	}
 
-	hash, err := base64.RawStdEncoding.DecodeString(parts[5])
+	hash, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
 		return false, err
 	}
@@ -55,7 +66,6 @@ func VerifyPasswordArgon2id(password, encodedHash string) (bool, error) {
 		uint32(len(hash)),
 	)
 
-	// Constant-time comparison
 	if subtle.ConstantTimeCompare(hash, computedHash) == 1 {
 		return true, nil
 	}

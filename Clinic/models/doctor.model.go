@@ -27,4 +27,5 @@ type Doctor struct {
 	Mobile           int64                `json:"mobile" bson:"mobile"`
 	Appointments     []primitive.ObjectID `json:"appointments" bson:"appointments"`
 	Clinics          []ClinicDetails      `json:"clinics" bson:"clinics"`
+	Role             string               `json:"role" bson:"role"`
 }

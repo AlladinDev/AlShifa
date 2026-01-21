@@ -3,6 +3,7 @@ package main
 import (
 	clinic "AlShifa/Clinic"
 	internals "AlShifa/Internals"
+	users "AlShifa/Users"
 	"fmt"
 	"log"
 	"net/http"
@@ -44,11 +45,10 @@ func main() {
 		Server: http.NewServeMux(),
 	}
 
-	// appStore.Server.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	// 	json.NewEncoder(w).Encode("Server working")
-	// })
 	//initialise modules
 	clinic.InitialiseClinicModule(&appStore)
+	users.InitialiseUserModule(&appStore)
+
 	fmt.Print("Server Started")
 
 	if err := http.ListenAndServe(":"+port, appStore.Server); err != nil {
@@ -56,52 +56,3 @@ func main() {
 	}
 
 }
-
-// package main
-
-// import (
-// 	validators "AlShifa/Clinic/Validators"
-// 	"AlShifa/Clinic/models"
-// 	"fmt"
-// 	"time"
-
-// 	"go.mongodb.org/mongo-driver/bson/primitive"
-// )
-
-// // Helper to parse time strings without stopping execution
-// func parseTime(s string) time.Time {
-// 	t, err := time.Parse("03:04 PM", s)
-// 	if err != nil {
-// 		fmt.Print(err)
-// 	}
-// 	fmt.Println(t)
-// 	return t
-// }
-
-// func main() {
-// 	// Generate dummy data for a Clinic instance
-
-// 	dummyClinic := models.Clinic{
-// 		RegistrationDate: time.Date(2026, time.January, 17, 10, 0, 0, 0, time.UTC),
-// 		Name:             "HealthFirst Wellness Center",
-// 		Address:          "Soura Srinagar",
-// 		SeasonTimings: []models.SeasonTimingDetails{
-// 			{
-// 				Name:  "Summer",
-// 				Start: parseTime("06:00 AM"), // Matches "03:04 PM" layout
-// 				End:   parseTime("08:00 PM"),
-// 			},
-// 			{
-// 				Name:  "Winter",
-// 				Start: parseTime("09:00 AM"),
-// 				End:   parseTime("05:00 PM"),
-// 			},
-// 		},
-// 		Mobile:  9876543000,
-// 		Pincode: 190011,
-// 		Doctors: nil,
-// 		Wallet:  primitive.NilObjectID,
-// 	}
-
-// 	fmt.Print(validators.ValidateClinicDetails(&dummyClinic))
-// }

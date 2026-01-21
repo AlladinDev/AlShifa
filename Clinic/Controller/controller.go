@@ -42,7 +42,7 @@ func (controller *Controller) RegisterClinic(res http.ResponseWriter, req *http.
 
 	var clinicRegistrationDetails ClinicRegistration
 	if err := json.NewDecoder(req.Body).Decode(&clinicRegistrationDetails); err != nil {
-		_ = utils.WriteResponse(res, utils.ReturnAppError(err, 500, "Invalid Details Provided", "Json Error"))
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 500, "Invalid Details Provided", "Json Error"))
 		return
 	}
 
@@ -50,13 +50,13 @@ func (controller *Controller) RegisterClinic(res http.ResponseWriter, req *http.
 	validationErrors := validators.ValidateClinicDetails(&clinicRegistrationDetails.Clinic)
 	if len(validationErrors) != 0 {
 		fmt.Print(validationErrors)
-		_ = utils.WriteResponse(res, utils.ReturnAppError(validationErrors, 400, "Invalid Details", "Validation Failed"))
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(validationErrors, 400, "Invalid Details", "Validation Failed"))
 		return
 	}
 
 	registrationErr := controller.Service.RegisterClinic(ctx, clinicRegistrationDetails.OwnerID, clinicRegistrationDetails.Clinic)
 	if registrationErr != nil {
-		_ = utils.WriteResponse(res, registrationErr)
+		_ = utils.WriteResponse(res, http.StatusInternalServerError, registrationErr)
 		return
 	}
 
@@ -66,7 +66,7 @@ func (controller *Controller) RegisterClinic(res http.ResponseWriter, req *http.
 		StatusCode: 201,
 	}
 
-	_ = utils.WriteResponse(res, response)
+	_ = utils.WriteResponse(res, http.StatusCreated, response)
 }
 
 func (controller *Controller) RegisterOwner(res http.ResponseWriter, req *http.Request) {
@@ -80,18 +80,18 @@ func (controller *Controller) RegisterOwner(res http.ResponseWriter, req *http.R
 
 	var ownerDetails models.Owner
 	if err := json.NewDecoder(req.Body).Decode(&ownerDetails); err != nil {
-		_ = utils.WriteResponse(res, utils.ReturnAppError(err, 500, "Invalid Details", "InValid Json"))
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 500, "Invalid Details", "InValid Json"))
 		return
 	}
 
 	//now validate here
 	if err := validators.ValidateOwnerDetails(&ownerDetails); err != nil {
-		_ = utils.WriteResponse(res, utils.ReturnAppError(err, 500, "Invalid Details", "Validation Failure"))
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 500, "Invalid Details", "Validation Failure"))
 		return
 	}
 
 	if err := controller.Service.RegisterClinicOwner(ctx, ownerDetails); err != nil {
-		_ = utils.WriteResponse(res, err)
+		_ = utils.WriteResponse(res, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -101,7 +101,7 @@ func (controller *Controller) RegisterOwner(res http.ResponseWriter, req *http.R
 		StatusCode: 201,
 	}
 
-	_ = utils.WriteResponse(res, response)
+	_ = utils.WriteResponse(res, http.StatusCreated, response)
 }
 
 func (controller *Controller) SearchClinic(res http.ResponseWriter, req *http.Request) {
@@ -125,7 +125,7 @@ func (controller *Controller) SearchClinic(res http.ResponseWriter, req *http.Re
 		if key == "id" {
 			objID, err := primitive.ObjectIDFromHex(value)
 			if err != nil {
-				_ = utils.WriteResponse(res, utils.ReturnAppError(err, 400, "Unable To Fetch Clinic Details", "Server Error"))
+				_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 400, "Unable To Fetch Clinic Details", "Server Error"))
 				return
 			}
 			filters["_id"] = objID
@@ -138,11 +138,11 @@ func (controller *Controller) SearchClinic(res http.ResponseWriter, req *http.Re
 	// Call your service with filters
 	clinics, err := controller.Service.SearchClinic(ctx, filters)
 	if err != nil {
-		_ = utils.WriteResponse(res, err)
+		_ = utils.WriteResponse(res, http.StatusInternalServerError, err)
 		return
 	}
 
-	utils.WriteResponse(res, utils.ReturnAppSuccess(200, "Fetched Successfully", clinics))
+	utils.WriteResponse(res, http.StatusOK, utils.ReturnAppSuccess(200, "Fetched Successfully", clinics))
 }
 
 func (controller *Controller) SearchOwner(res http.ResponseWriter, req *http.Request) {
@@ -166,7 +166,7 @@ func (controller *Controller) SearchOwner(res http.ResponseWriter, req *http.Req
 		if key == "_id" {
 			objID, err := primitive.ObjectIDFromHex(value)
 			if err != nil {
-				_ = utils.WriteResponse(res, utils.ReturnAppError(err, 400, "Unable To Fetch Owner Details", "Server Error"))
+				_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 400, "Unable To Fetch Owner Details", "Server Error"))
 				return
 			}
 			filters["_id"] = objID
@@ -180,11 +180,11 @@ func (controller *Controller) SearchOwner(res http.ResponseWriter, req *http.Req
 	fmt.Print(params)
 	owner, err := controller.Service.SearchOwner(ctx, filters)
 	if err != nil {
-		_ = utils.WriteResponse(res, err)
+		_ = utils.WriteResponse(res, http.StatusInternalServerError, err)
 		return
 	}
 
-	_ = utils.WriteResponse(res, utils.ReturnAppSuccess(200, "Fetched Successfully", owner))
+	_ = utils.WriteResponse(res, http.StatusOK, utils.ReturnAppSuccess(200, "Fetched Successfully", owner))
 }
 
 func (controller *Controller) RegisterDoctor(res http.ResponseWriter, req *http.Request) {
@@ -193,24 +193,24 @@ func (controller *Controller) RegisterDoctor(res http.ResponseWriter, req *http.
 	var doctor models.Doctor
 
 	if err := json.NewDecoder(req.Body).Decode(&doctor); err != nil {
-		_ = utils.WriteResponse(res, utils.ReturnAppError(err, 500, "Registration Failed", "Invalid Json"))
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 500, "Registration Failed", "Invalid Json"))
 		return
 	}
 
 	//here do validation
 	validationErrors := validators.ValidateDoctor(doctor)
 	if validationErrors != nil {
-		_ = utils.WriteResponse(res, utils.ReturnAppError(validationErrors, 400, "Registration Failed", "Invalid Details"))
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(validationErrors, 400, "Registration Failed", "Invalid Details"))
 		return
 	}
 
 	if err := controller.Service.RegisterDoctor(ctx, doctor); err != nil {
-		_ = utils.WriteResponse(res, err)
+		_ = utils.WriteResponse(res, http.StatusInternalServerError, err)
 		return
 	}
 
 	//here it means doctor is successfully registered
-	_ = utils.WriteResponse(res, structs.IAppSuccess{
+	_ = utils.WriteResponse(res, http.StatusCreated, structs.IAppSuccess{
 		Message:    "Doctor Registered Successfully",
 		Data:       nil,
 		StatusCode: 200,
@@ -244,7 +244,7 @@ func (controller *Controller) SearchDoctor(res http.ResponseWriter, req *http.Re
 		if key == "id" {
 			objID, err := primitive.ObjectIDFromHex(value)
 			if err != nil {
-				_ = utils.WriteResponse(res, utils.ReturnAppError(err, 400, "Unable To Fetch Doctors Details", "Server Error"))
+				_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 400, "Unable To Fetch Doctors Details", "Server Error"))
 				return
 			}
 			filters["_id"] = objID
@@ -256,14 +256,57 @@ func (controller *Controller) SearchDoctor(res http.ResponseWriter, req *http.Re
 
 	doctors, err := controller.Service.SearchDoctor(ctx, filters)
 	if err != nil {
-		_ = utils.WriteResponse(res, err)
+		_ = utils.WriteResponse(res, http.StatusInternalServerError, err)
 		return
 	}
 
-	utils.WriteResponse(res, structs.IAppSuccess{
+	utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
 		Message:    "Successfully Fetched Details",
 		Data:       doctors,
 		StatusCode: 200,
 	})
 
+}
+
+func (controller *Controller) LoginClinicOwner(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+
+	var loginDetails structs.LoginDetails
+
+	if err := json.NewDecoder(req.Body).Decode(&loginDetails); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 500, "Login Failed", "Invalid Json"))
+		return
+	}
+	jwtToken, err := controller.Service.LoginClinicOwner(ctx, loginDetails.Email, loginDetails.Password)
+	if err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+	_ = utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
+		Message:    "Login Successful",
+		Data:       utils.JwtPrefix + jwtToken,
+		StatusCode: 200,
+	})
+}
+
+func (controller *Controller) LoginDoctor(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+
+	var loginDetails structs.LoginDetails
+	if err := json.NewDecoder(req.Body).Decode(&loginDetails); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 500, "Login Failed", "Invalid Json"))
+		return
+	}
+	jwtToken, err := controller.Service.LoginDoctor(ctx, loginDetails.Email, loginDetails.Password)
+	if err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+	_ = utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
+		Message:    "Login Successful",
+		Data:       utils.JwtPrefix + jwtToken,
+		StatusCode: 200,
+	})
 }

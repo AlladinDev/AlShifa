@@ -89,6 +89,7 @@ func (service *ClinicService) RegisterClinicOwner(ctx context.Context, ownerDeta
 	ownerDetails.RegistrationDate = time.Now().UTC()
 	ownerDetails.Clinic = primitive.NilObjectID
 	ownerDetails.ID = primitive.NewObjectID()
+	ownerDetails.Role = utils.RoleClinicOwner
 
 	//now call the repo method to register owner
 	registrationErr := service.Repo.RegisterClinicOwner(ctx, ownerDetails)
@@ -148,6 +149,8 @@ func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.
 	doctor.Appointments = nil
 	doctor.RegistrationDate = time.Now()
 	doctor.ID = primitive.NewObjectID()
+	doctor.Role = utils.RoleDoctor
+
 	hashedPassword, err := utils.HashPasswordArgon2id(doctor.Password)
 	if err != nil {
 		return utils.ReturnAppError(err, 500, "Registration Failed", "Server Error")
@@ -168,4 +171,50 @@ func (service *ClinicService) SearchDoctor(ctx context.Context, filter bson.M) (
 
 	// }
 	return service.Repo.SearchDoctors(ctx, filter)
+}
+
+func (service *ClinicService) LoginClinicOwner(ctx context.Context, email string, password string) (string, *structs.IAppError) {
+	owners, err := service.Repo.GetOwnerDetails(ctx, bson.M{"email": email})
+	if err != nil {
+		return "", utils.ReturnAppError(err, 404, "Owner Not Found", "Invalid Email or Password")
+	}
+
+	if len(owners) == 0 {
+		return "", utils.ReturnAppError(errors.New("owner not found"), 404, "Owner Not Found", "Invalid Email or Password")
+	}
+
+	owner := owners[0]
+
+	passwordMatches, err := utils.VerifyPasswordArgon2id(password, owner.Password)
+	if err != nil || !passwordMatches {
+		return "", utils.ReturnAppError(err, 401, "Unauthorized", "Invalid Email or Password")
+	}
+
+	token, err := utils.GenerateJWT(owner.ID.Hex(), owner.Role)
+	if err != nil {
+		return "", utils.ReturnAppError(err, 500, "Login Failed", "Server Error")
+	}
+
+	return token, nil
+}
+
+func (service *ClinicService) LoginDoctor(ctx context.Context, email string, password string) (string, *structs.IAppError) {
+	doctors, err := service.Repo.SearchDoctors(ctx, bson.M{"email": email})
+	if err != nil {
+		return "", utils.ReturnAppError(err, 404, "Doctor Not Found", "Invalid Email or Password")
+	}
+	if len(doctors) == 0 {
+		return "", utils.ReturnAppError(errors.New("doctor not found"), 404, "Doctor Not Found", "Invalid Email or Password")
+	}
+	doctor := doctors[0]
+
+	passwordMatches, err := utils.VerifyPasswordArgon2id(password, doctor.Password)
+	if err != nil || !passwordMatches {
+		return "", utils.ReturnAppError(err, 401, "Unauthorized", "Invalid Email or Password")
+	}
+	token, err := utils.GenerateJWT(doctor.ID.Hex(), doctor.Role)
+	if err != nil {
+		return "", utils.ReturnAppError(err, 500, "Login Failed", "Server Error")
+	}
+	return token, nil
 }
