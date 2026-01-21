@@ -16,5 +16,5 @@ func InitialiseUserModule(app *internals.App) {
 	controller := controller.ReturnNewController(service)
 	app.Server.HandleFunc(utils.MakeURL("POST", "/user/register"), controller.RegisterUser)
 	app.Server.HandleFunc(utils.MakeURL("POST", "/user/login"), controller.LoginUser)
-	app.Server.HandleFunc(utils.MakeURL("GET", "/user/details"), middleware.JwtAuthMiddleware(controller.SearchUser))
+	app.Server.HandleFunc(utils.MakeURL("GET", "/user/details"), middleware.JwtAuthMiddleware(middleware.RoleGuardMiddleware(controller.SearchUser, utils.RoleUser)))
 }

@@ -182,7 +182,7 @@ func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Docto
 		// 5️⃣ Group back
 		bson.D{{Key: "$group", Value: bson.D{
 			{Key: "_id", Value: "$_id"},
-
+			{Key: "password", Value: bson.D{{Key: "$first", Value: "$password"}}},
 			{Key: "registrationDate", Value: bson.D{{Key: "$first", Value: "$registrationDate"}}},
 			{Key: "name", Value: bson.D{{Key: "$first", Value: "$name"}}},
 			{Key: "qualifications", Value: bson.D{{Key: "$first", Value: "$qualifications"}}},

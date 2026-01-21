@@ -5,6 +5,7 @@ import (
 	service "AlShifa/Clinic/Service"
 	validators "AlShifa/Clinic/Validators"
 	"AlShifa/Clinic/models"
+	middleware "AlShifa/Middleware"
 	structs "AlShifa/Structs"
 	utils "AlShifa/Utils"
 	"context"
@@ -146,6 +147,13 @@ func (controller *Controller) SearchClinic(res http.ResponseWriter, req *http.Re
 }
 
 func (controller *Controller) SearchOwner(res http.ResponseWriter, req *http.Request) {
+	userRole := req.Context().Value(middleware.ContextUserRoleKey).(string)
+	userID := req.Context().Value(middleware.ContextUserIDKey).(string)
+
+	if userRole == "" {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(nil, 400, "Missing Role", "Missing Role"))
+		return
+	}
 	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
 	defer cancel()
 
@@ -155,32 +163,30 @@ func (controller *Controller) SearchOwner(res http.ResponseWriter, req *http.Req
 	// Initialize empty filter
 	filters := bson.M{}
 
-	// Iterate over query params
-	for key, values := range params {
-		if len(values) == 0 {
-			continue
-		}
-		value := values[0] // take first value for simplicity
-
-		// Special handling for clinicId
-		if key == "_id" {
-			objID, err := primitive.ObjectIDFromHex(value)
-			if err != nil {
-				_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 400, "Unable To Fetch Owner Details", "Server Error"))
-				return
+	if userRole == utils.RoleAdmin {
+		//only admin can fetch all owners using various filters and clinic owner can see just their details by id in their jwt token
+		// Iterate over query params
+		for key, values := range params {
+			if len(values) == 0 {
+				continue
 			}
-			filters["_id"] = objID
-		} else {
+			value := values[0] // take first value for simplicity
 			// Treat all other fields as string match
 			filters[key] = value
 		}
 	}
 
-	// Call your service with filters
-	fmt.Print(params)
-	owner, err := controller.Service.SearchOwner(ctx, filters)
+	userMongoDBID, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
-		_ = utils.WriteResponse(res, http.StatusInternalServerError, err)
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 400, "Invalid UserID", err.Error()))
+		return
+	}
+
+	filters["_id"] = userMongoDBID
+
+	owner, userSearchErr := controller.Service.SearchOwner(ctx, filters)
+	if userSearchErr != nil {
+		_ = utils.WriteResponse(res, http.StatusInternalServerError, *userSearchErr)
 		return
 	}
 

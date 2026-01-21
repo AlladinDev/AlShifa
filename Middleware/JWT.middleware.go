@@ -5,7 +5,6 @@ import (
 	structs "AlShifa/Structs"
 	utils "AlShifa/Utils"
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -43,13 +42,12 @@ func JwtAuthMiddleware(handler func(http.ResponseWriter, *http.Request)) func(ht
 			return
 		}
 
-		fmt.Println("Token Parts:", strings.Trim(parts[1], " ")) // Debugging line to print token parts
 		tokenStr := parts[1]
 
 		//use utility function to validate token
 		claims, err := utils.ValidateJWT(tokenStr)
 		if err != nil {
-			fmt.Println("error is", err)
+
 			_ = utils.WriteResponse(w, http.StatusBadRequest, structs.IAppError{
 				StatusCode: http.StatusUnauthorized,
 				Message:    "Invalid or expired token",
