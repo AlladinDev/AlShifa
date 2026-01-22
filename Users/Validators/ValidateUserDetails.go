@@ -45,6 +45,10 @@ func ValidateUser(u *models.User) map[string]string {
 	password := u.Password
 	if password == "" {
 		errors["password"] = "password is required"
+	} else if len(password) > utils.MaxPasswordLength {
+		errors["password"] = "password is too long"
+	} else if len(password) < utils.MinPasswordLength {
+		errors["password"] = "password is too short"
 	} else {
 		var hasUpper, hasLower, hasDigit, hasSpecial bool
 
@@ -65,14 +69,14 @@ func ValidateUser(u *models.User) map[string]string {
 			}
 		}
 
-		if !(hasUpper && hasLower && hasDigit && hasSpecial) {
+		if !hasUpper || !hasLower || !hasDigit || !hasSpecial {
 			errors["password"] = "password must contain upper, lower, digit and special character"
 		}
 	}
 
 	// ---------- Age ----------
 	if u.Age < utils.MinAge || u.Age > utils.MaxAge {
-		errors["age"] = "age must be between valid range"
+		errors["age"] = fmt.Sprintf("age must be between  %d and %d", utils.MinAge, utils.MaxAge)
 	}
 
 	// ---------- Address ----------
