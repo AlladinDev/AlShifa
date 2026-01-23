@@ -152,6 +152,16 @@ func TestValidateUserDetails(t *testing.T) {
 			expectedField:      "mobile",
 			expectedErrMessage: "mobile number must be 10 digits",
 		},
+		//invalid mobile number test case eg -9797798243 in negative
+		{
+			name:    "mobile_negative",
+			useCase: "Negative Mobile Number",
+			modifyUser: func(u *models.User) {
+				u.Mobile = -979779824
+			},
+			expectedField:      "mobile",
+			expectedErrMessage: "mobile number must be positive",
+		},
 
 		// ---------- PINCODE ----------
 		{

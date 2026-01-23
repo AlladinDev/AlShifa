@@ -89,7 +89,9 @@ func ValidateUser(u *models.User) map[string]string {
 
 	// ---------- Mobile ----------
 	mobile := fmt.Sprintf("%d", u.Mobile)
-	if u.Mobile == 0 {
+	if u.Mobile < 0 {
+		errors["mobile"] = "mobile number must be positive"
+	} else if u.Mobile == 0 {
 		errors["mobile"] = "mobile number is required"
 	} else if len(mobile) != utils.MobileLength {
 		errors["mobile"] = "mobile number must be 10 digits"
