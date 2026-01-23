@@ -29,3 +29,11 @@ type Doctor struct {
 	Clinics          []ClinicDetails      `json:"clinics" bson:"clinics"`
 	Role             string               `json:"role" bson:"role"`
 }
+
+type DoctorPublicDetails struct {
+	ID             primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Name           string             `json:"name" bson:"name"`
+	Qualifications string             `json:"qualifications" bson:"qualifications"`
+	WorkingAt      string             `json:"workingAt" bson:"workingAt"`
+	Clinics        []ClinicDetails    `json:"clinics" bson:"clinics"`
+}

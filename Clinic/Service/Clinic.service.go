@@ -164,7 +164,7 @@ func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.
 	return nil
 }
 
-func (service *ClinicService) SearchDoctor(ctx context.Context, filter bson.M) ([]models.Doctor, error) {
+func (service *ClinicService) SearchDoctor(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, error) {
 	// //here validate filters
 	// allowedFilters := []string{"_id", "name", "mobile", "email"}
 	// for keys := range filter {
@@ -199,14 +199,10 @@ func (service *ClinicService) LoginClinicOwner(ctx context.Context, email string
 }
 
 func (service *ClinicService) LoginDoctor(ctx context.Context, email string, password string) (string, *structs.IAppError) {
-	doctors, err := service.Repo.SearchDoctors(ctx, bson.M{"email": email})
+	doctor, err := service.Repo.SearchDoctor(ctx, bson.M{"email": email})
 	if err != nil {
 		return "", utils.ReturnAppError(err, 404, "Doctor Not Found", "Invalid Email or Password")
 	}
-	if len(doctors) == 0 {
-		return "", utils.ReturnAppError(errors.New("doctor not found"), 404, "Doctor Not Found", "Invalid Email or Password")
-	}
-	doctor := doctors[0]
 
 	passwordMatches, err := utils.VerifyPasswordArgon2id(password, doctor.Password)
 	if err != nil || !passwordMatches {

@@ -3,25 +3,11 @@ package validators
 
 import (
 	"AlShifa/Clinic/models"
+	utils "AlShifa/Utils"
+	"regexp"
 	"strings"
+	"unicode"
 )
-
-const (
-	MaxClinicNameLength = 150
-	MaxSeasonNameLength = 50
-	MaxPincodeDigits    = 6
-	MaxOwnerNameLength  = 50
-	MaxEmailLength      = 50
-	MaxPasswordLength   = 50
-	MaxAddressLength    = 200
-	MaxGenderLength     = 10
-	MaxMobileDigits     = 10
-)
-
-type ClinicRegistrationValidationErrors struct {
-	ClinicDetailsError map[string]string `json:"clinicDetailsError"`
-	OwnerDetailsError  map[string]string `json:"ownerDetailsError"`
-}
 
 func ValidateOwnerDetails(owner *models.Owner) map[string]string {
 	errors := make(map[string]string)
@@ -34,55 +20,82 @@ func ValidateOwnerDetails(owner *models.Owner) map[string]string {
 	// Name
 	name := strings.TrimSpace(owner.Name)
 	if name == "" {
-		errors["name"] = "owner name is required"
-	} else if len(name) > MaxOwnerNameLength {
-		errors["name"] = "owner name is too long"
+		errors["name"] = utils.NameMissingErrMsg
+	} else if len(name) > utils.MaxNameLength {
+		errors["name"] = utils.LongNameErrMsg
+	} else if len(name) < utils.MinNameLength {
+		errors["name"] = utils.ShortNameErrMsg
 	}
 
 	// Email
 	email := strings.TrimSpace(owner.Email)
 	if email == "" {
-		errors["email"] = "email is required"
-	} else if len(email) > MaxEmailLength {
-		errors["email"] = "email is too long"
-	} else if !strings.Contains(email, "@") {
-		errors["email"] = "invalid email format"
+		errors["email"] = utils.EmailMissingErrMsg
+	} else if len(email) > utils.MaxEmailLength {
+		errors["email"] = utils.LongEmailErrMsg
+	} else if len(email) < utils.MinEmailLength {
+		errors["email"] = utils.ShortEmailErrMsg
+	} else if !regexp.MustCompile(utils.EmailRegex).MatchString(email) {
+		errors["email"] = utils.InvalidEmailFormatMsg
 	}
 
 	// Password
 	pass := strings.TrimSpace(owner.Password)
 	if pass == "" {
-		errors["password"] = "password is required"
+		errors["password"] = utils.PasswordMissingErrMsg
 	} else if len(pass) < 8 {
-		errors["password"] = "password must be at least 8 characters"
-	} else if len(pass) > MaxPasswordLength {
-		errors["password"] = "password is too long"
+		errors["password"] = utils.ShortPasswordErrMsg
+	} else if len(pass) > utils.MaxPasswordLength {
+		errors["password"] = utils.LongPasswordErrMsg
+	} else {
+		var hasUpper bool
+		var hasLower bool
+		var hasDigit bool
+		var hasSpecial bool
+		for _, r := range pass {
+			switch {
+			case unicode.IsUpper(r):
+				hasUpper = true
+			case unicode.IsLower(r):
+				hasLower = true
+			case unicode.IsDigit(r):
+				hasDigit = true
+			case unicode.IsPunct(r) || unicode.IsSymbol(r):
+				hasSpecial = true
+			}
+		}
+
+		if !hasUpper || !hasLower || !hasDigit || !hasSpecial {
+			errors["password"] = utils.PasswordWeakErrMsg
+		}
+
 	}
 
 	// Address
 	addr := strings.TrimSpace(owner.Address)
 	if addr == "" {
-		errors["address"] = "owner address is required"
-	} else if len(addr) > MaxAddressLength {
-		errors["address"] = "address is too long"
+		errors["address"] = utils.AddressMissingErrMsg
+	} else if len(addr) > utils.MaxAddressLength {
+		errors["address"] = utils.LongAddressErrMsg
+	} else if len(addr) < utils.MinAddressLength {
+		errors["address"] = utils.ShortAddressErrMsg
 	}
 
 	// Gender
 	gender := strings.TrimSpace(owner.Gender)
 	if gender == "" {
-		errors["gender"] = "gender is required"
-	} else if len(gender) > MaxGenderLength {
-		errors["gender"] = "gender is too long"
+		errors["gender"] = utils.GenderMissingErrMsg
 	} else {
 		g := strings.ToLower(gender)
 		if g != "male" && g != "female" && g != "other" {
-			errors["gender"] = "gender must be male, female, or other"
+			errors["gender"] = utils.InvalidGenderErrMsg
 		}
 	}
 
 	// Mobile
-	if owner.Mobile <= 0 || lenInt64Digits(owner.Mobile) > MaxMobileDigits {
-		errors["mobile"] = "invalid mobile number"
+
+	if lenInt64Digits(owner.Mobile) != utils.MobileLength {
+		errors["mobile"] = utils.InvalidMobileNumberMsg
 	}
 
 	if len(errors) == 0 {
@@ -116,7 +129,7 @@ func ValidateClinicDetails(clinic *models.Clinic) map[string]string {
 	name := strings.TrimSpace(clinic.Name)
 	if name == "" {
 		errors["name"] = "clinic name is required"
-	} else if len(name) > MaxClinicNameLength {
+	} else if len(name) > utils.MaxNameLength {
 		errors["name"] = "clinic name is too long"
 	}
 
@@ -124,12 +137,12 @@ func ValidateClinicDetails(clinic *models.Clinic) map[string]string {
 	address := strings.TrimSpace(clinic.Address)
 	if address == "" {
 		errors["address"] = "clinic address is required"
-	} else if len(address) > MaxAddressLength {
+	} else if len(address) > utils.MaxAddressLength {
 		errors["address"] = "clinic address is too long"
 	}
 
 	// Mobile
-	if clinic.Mobile <= 0 || lenInt64Digits(clinic.Mobile) != MaxMobileDigits {
+	if clinic.Mobile <= 0 || lenInt64Digits(clinic.Mobile) != utils.MobileLength {
 		errors["mobile"] = "invalid clinic mobile number"
 	}
 
@@ -150,7 +163,7 @@ func ValidateClinicDetails(clinic *models.Clinic) map[string]string {
 
 		if strings.TrimSpace(season.Name) == "" {
 			errors[prefix+" name"] = " season name is required"
-		} else if len(season.Name) > MaxSeasonNameLength {
+		} else if len(season.Name) > utils.MaxNameLength {
 			errors[prefix+" name"] = " season name is too long"
 		}
 

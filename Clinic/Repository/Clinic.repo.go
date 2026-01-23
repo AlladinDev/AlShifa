@@ -122,16 +122,14 @@ func (r *Repo) SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "doctorDetails"},
 		}}},
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Owner"},
-			{Key: "localField", Value: "owner"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "ownerDetails"},
-		}}},
-		bson.D{{Key: "$unwind", Value: bson.D{
-			{Key: "path", Value: "$ownerDetails"},
-			{Key: "preserveNullAndEmptyArrays", Value: true},
-		}}},
+		bson.D{
+			{Key: "$project", Value: bson.D{
+				{Key: "registrationDate", Value: 0},
+				{Key: "ownerDetails", Value: 0},
+				{Key: "wallet", Value: 0},
+				{Key: "owner", Value: 0},
+			}},
+		},
 	}
 
 	cursor, err := r.DB.Collection("Clinic").Aggregate(ctx, pipeline)
@@ -153,7 +151,7 @@ func (r *Repo) RegisterDoctor(ctx context.Context, doctorDetails models.Doctor) 
 	return err
 }
 
-func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Doctor, error) {
+func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, error) {
 	pipeline := mongo.Pipeline{
 		// 1️⃣ Match doctors by filter
 		bson.D{{Key: "$match", Value: filter}},
@@ -182,16 +180,9 @@ func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Docto
 		// 5️⃣ Group back
 		bson.D{{Key: "$group", Value: bson.D{
 			{Key: "_id", Value: "$_id"},
-			{Key: "password", Value: bson.D{{Key: "$first", Value: "$password"}}},
-			{Key: "registrationDate", Value: bson.D{{Key: "$first", Value: "$registrationDate"}}},
 			{Key: "name", Value: bson.D{{Key: "$first", Value: "$name"}}},
 			{Key: "qualifications", Value: bson.D{{Key: "$first", Value: "$qualifications"}}},
-			{Key: "address", Value: bson.D{{Key: "$first", Value: "$address"}}},
-			{Key: "email", Value: bson.D{{Key: "$first", Value: "$email"}}},
-
 			{Key: "workingAt", Value: bson.D{{Key: "$first", Value: "$workingAt"}}},
-			{Key: "mobile", Value: bson.D{{Key: "$first", Value: "$mobile"}}},
-			{Key: "appointments", Value: bson.D{{Key: "$first", Value: "$appointments"}}},
 
 			// ⭐ CRITICAL FIX: Only push to array if clinics.clinic exists
 			{Key: "clinics", Value: bson.D{
@@ -223,10 +214,18 @@ func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Docto
 	}
 	defer cursor.Close(ctx)
 
-	var doctors []models.Doctor
+	var doctors []models.DoctorPublicDetails
 	if err := cursor.All(ctx, &doctors); err != nil {
 		return nil, err
 	}
 
 	return doctors, nil
+}
+
+//SearchDoctor searches for a single doctor based on the provided filter. it returns password and email fields so use it for internal apis like login only and not for public use
+func (r *Repo) SearchDoctor(ctx context.Context, filter bson.M) (models.Doctor, error) {
+	result := r.DB.Collection("Doctor").FindOne(ctx, filter)
+	var doctor models.Doctor
+	err := result.Decode(&doctor)
+	return doctor, err
 }
