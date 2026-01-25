@@ -55,7 +55,7 @@ func (controller *UserController) RegisterUser(res http.ResponseWriter, req *htt
 	}
 
 	if err := controller.Service.AddUser(ctx, user); err != nil {
-		_ = utils.WriteResponse(res, http.StatusBadRequest, err)
+		_ = utils.WriteResponse(res, err.StatusCode, err)
 		return
 	}
 
@@ -70,21 +70,34 @@ func (controller *UserController) SearchUser(res http.ResponseWriter, req *http.
 	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
 	defer cancel()
 
-	userID := req.Context().Value(middleware.ContextUserIDKey).(string)
+	userID := req.Context().Value(middleware.ContextUserIDKey)
 	if userID == "" {
 		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(nil, 400, "Missing ID", "Missing ID"))
 		return
 	}
+	// //now safely try to parse userID which is of type any to string and if it fails throw error
+	// userIDString,
+	userIDString, ok := userID.(string)
+	if !ok || userIDString == "" {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(nil, 400, "Invalid or missing Userid ", "Invalid or missing Userid"))
+		return
+	}
 
-	objectUserID, err := primitive.ObjectIDFromHex(userID)
+	objectUserID, err := primitive.ObjectIDFromHex(userIDString)
 	if err != nil {
 		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 400, "Invalid UserID", err.Error()))
 		return
 	}
 
+	//if userId is nill or zero typed return error
+	if objectUserID == primitive.NilObjectID {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 400, "Zero valued ObjectId", "Zero value userid passed"))
+		return
+	}
+
 	user, searchErr := controller.Service.SearchUserByID(ctx, objectUserID)
 	if searchErr != nil {
-		_ = utils.WriteResponse(res, http.StatusInternalServerError, utils.ReturnAppError(err, 500, "Failed To Get User Details", "Server Error"))
+		_ = utils.WriteResponse(res, searchErr.StatusCode, utils.ReturnAppError(err, searchErr.StatusCode, "Failed To Get User Details", "Server Error"))
 		return
 	}
 
@@ -97,9 +110,9 @@ func (controller *UserController) LoginUser(res http.ResponseWriter, req *http.R
 
 	var loginDetails userModuleStructs.LoginDetails
 	if err := json.NewDecoder(req.Body).Decode(&loginDetails); err != nil {
-		_ = utils.WriteResponse(res, http.StatusOK, structs.IAppError{
+		_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppError{
 			Message:    "Login Failed",
-			StatusCode: 400,
+			StatusCode: http.StatusBadRequest,
 			Reason:     "Invalid Json",
 			ErrorObj:   err,
 		})

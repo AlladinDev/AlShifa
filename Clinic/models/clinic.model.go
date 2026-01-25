@@ -27,4 +27,5 @@ type Clinic struct {
 	Wallet           primitive.ObjectID    `json:"wallet" bson:"wallet"`
 	OwnerDetails     *Owner                `bson:"ownerDetails,omitempty"`
 	DoctorDetails    []Doctor              `bson:"doctorDetails,omitempty"`
+	PlanType         string                `json:"planType" bson:"planType"`
 }

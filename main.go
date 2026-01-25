@@ -26,13 +26,16 @@ func printMemUsage() {
 func main() {
 	printMemUsage()
 
-	// Do not load .env file in Railway production
-	if _, exists := os.LookupEnv("RAILWAY_ENVIRONMENT_NAME"); !exists {
-		if err := godotenv.Load(); err != nil {
-			log.Fatal("error loading .env file:", err)
-		}
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("error loading .env file:", err)
 	}
+
 	port := os.Getenv("PORT")
+
+	if port == "" {
+		port = "8000"
+	}
+	addr := "0.0.0.0:" + port
 
 	//call monogodb connect function
 	mongoClient, mongoErr := internals.ConnectMongo(os.Getenv("MONGODB_URL"))
@@ -51,7 +54,7 @@ func main() {
 
 	fmt.Print("Server Started")
 
-	if err := http.ListenAndServe(":"+port, appStore.Server); err != nil {
+	if err := http.ListenAndServe(addr, appStore.Server); err != nil {
 		fmt.Print("Failed to start server on error is", err)
 	}
 
