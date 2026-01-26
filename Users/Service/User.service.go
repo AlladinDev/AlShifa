@@ -50,7 +50,7 @@ func (s *Service) AddUser(ctx context.Context, user models.User) *structs.IAppEr
 			Message:    "This Email or Mobile Already Exists",
 			StatusCode: 400,
 			Reason:     "Duplicate Email or Mobile",
-			ErrorObj:   userExistsDBErr,
+			ErrorObj:   errors.New("user already exists"),
 		}
 	}
 
