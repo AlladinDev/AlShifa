@@ -2,6 +2,7 @@ package emailnotifier
 
 import (
 	utils "AlShifa/Utils"
+	"os"
 	"testing"
 )
 
@@ -9,7 +10,9 @@ func TestRealEmailSending(t *testing.T) {
 	//os.Setenv("GODEBUG", "netdns=go")
 	//compulsory load envs first
 	// os.Clearenv()
-	utils.LoadEnvs()
+	if os.Getenv("APP_ENV") != "production" {
+		utils.LoadEnvs()
+	}
 
 	//appEmail := os.Getenv("APP_EMAIL")
 
