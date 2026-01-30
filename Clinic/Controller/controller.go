@@ -2,7 +2,7 @@
 package controller
 
 import (
-	service "AlShifa/Clinic/Service"
+	interfaces "AlShifa/Clinic/Interfaces"
 	validators "AlShifa/Clinic/Validators"
 	"AlShifa/Clinic/models"
 	middleware "AlShifa/Middleware"
@@ -10,6 +10,7 @@ import (
 	utils "AlShifa/Utils"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -18,7 +19,8 @@ import (
 )
 
 type Controller struct {
-	Service *service.ClinicService
+	Service                            interfaces.IService
+	ValidateAddDoctorToClinicDetailsFn func(details *models.AddDoctorToClinic) map[string]string
 }
 
 type ClinicRegistration struct {
@@ -26,9 +28,10 @@ type ClinicRegistration struct {
 	Clinic  models.Clinic `json:"clinicDetails"`
 }
 
-func NewController(svr *service.ClinicService) *Controller {
+func NewController(svr interfaces.IService, validateAddDoctorToClinicFn func(details *models.AddDoctorToClinic) map[string]string) *Controller {
 	return &Controller{
-		Service: svr,
+		Service:                            svr,
+		ValidateAddDoctorToClinicDetailsFn: validateAddDoctorToClinicFn,
 	}
 }
 
@@ -315,4 +318,161 @@ func (controller *Controller) LoginDoctor(res http.ResponseWriter, req *http.Req
 		Data:       utils.JwtPrefix + jwtToken,
 		StatusCode: 200,
 	})
+}
+
+func (controller *Controller) AddDoctorToClinic(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+
+	//first try to see if client id is present in req.context
+	ownerID := req.Context().Value(middleware.ContextUserIDKey)
+	if ownerID == "" {
+		_ = utils.WriteResponse(res, 400, utils.ReturnAppError(errors.New("ownerid is missing"), 400, "OwnerID missing", "OwnerId is missing for authentication"))
+		return
+	}
+
+	//now try to convert ownerID into string
+	ownerIDStr, ok := ownerID.(string)
+	if !ok {
+		_ = utils.WriteResponse(res, 400, utils.ReturnAppError(errors.New("ownerid is invalid"), 400, "OwnerID invalid", "OwnerId is invalid for authentication"))
+		return
+	}
+
+	ownerMongoDBID, err := primitive.ObjectIDFromHex(ownerIDStr)
+	if err != nil {
+		_ = utils.WriteResponse(res, 400, utils.ReturnAppError(errors.New("ownerid is invalid"), 400, "OwnerID invalid", "OwnerId is invalid for authentication"))
+		return
+	}
+	fmt.Print("reached here")
+
+	//now extract clinicdetails from req.payload
+	var clinicDetails models.AddDoctorToClinic
+	if err := json.NewDecoder(req.Body).Decode(&clinicDetails); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, err)
+		return
+	}
+
+	//now validate details first
+	validationErrors := controller.ValidateAddDoctorToClinicDetailsFn(&clinicDetails)
+	if validationErrors != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, validationErrors)
+		return
+	}
+
+	//now using ownerMongoDbID find its associated clinic
+	clinics, searchClinicErr := controller.Service.SearchClinic(ctx, bson.M{"owner": ownerMongoDBID})
+	if searchClinicErr != nil {
+		_ = utils.WriteResponse(res, searchClinicErr.StatusCode, searchClinicErr)
+		return
+	}
+
+	if len(clinics) == 0 {
+		_ = utils.WriteResponse(res, http.StatusNotFound, &structs.IAppError{
+			Message:    "No Clinic Found",
+			Reason:     "No Clinic Found For this Owner",
+			StatusCode: http.StatusNotFound,
+			ErrorObj:   nil,
+		})
+		return
+	}
+
+	//add id to clinicDetails and dont trust frontend for sending it
+	clinicDetails.ClinicID = clinics[0].ID
+
+	//now as we have clinic also now fit details such as clinicid in clinic details and pass this info to serviced layer
+	if err := controller.Service.AddDoctorToClinic(ctx, clinicDetails); err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
+		Message:    "OTP sent to doctor email valid for " + utils.OTPExpiry.String() + " seconds",
+		StatusCode: http.StatusOK,
+		Data:       nil,
+	})
+}
+
+func (controller *Controller) VerifyAddDoctorToClinicOtp(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+
+	var otpPayload struct {
+		OTP      string `json:"otp"`
+		DoctorID string `json:"doctorID"`
+	}
+
+	if err := json.NewDecoder(req.Body).Decode(&otpPayload); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, err)
+		return
+	}
+
+	//now try to extract clinicid from context
+	ownerID := req.Context().Value(middleware.ContextUserIDKey)
+	if ownerID == "" {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, errors.New("missing clinicid"))
+		return
+	}
+
+	//now try to convert clinicid to string
+	ownerIDString, ok := ownerID.(string)
+	if !ok {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, errors.New("invalid clinicId"))
+		return
+	}
+
+	//now convert clinicIDString into mongodb format
+	ownerIDMongoDBID, err := primitive.ObjectIDFromHex(ownerIDString)
+	if err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, errors.New("invalid clinicId"))
+		return
+	}
+
+	//now do some validation
+	if len(otpPayload.OTP) != 6 {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, errors.New("6 digit  otp required"))
+		return
+	}
+
+	if otpPayload.DoctorID == "" {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, errors.New("DoctorID cannot be empty"))
+		return
+	}
+
+	//now convert doctorID to  mongoDB ID
+	doctorMongoDBID, err := primitive.ObjectIDFromHex(otpPayload.DoctorID)
+	if err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, errors.New("invalid doctorID"))
+		return
+	}
+
+	//now fetch the clinic using ownerID
+	clinics, clinicSearchErr := controller.Service.SearchClinic(ctx, bson.M{"owner": ownerIDMongoDBID})
+	if clinicSearchErr != nil {
+		_ = utils.WriteResponse(res, clinicSearchErr.StatusCode, err)
+		return
+	}
+
+	if len(clinics) == 0 {
+		_ = utils.WriteResponse(res, http.StatusNotFound, &structs.IAppError{
+			Message:    "No Clinic Found",
+			ErrorObj:   errors.New("no clinic found"),
+			Reason:     errors.New("no clinic found").Error(),
+			StatusCode: http.StatusNotFound,
+		})
+		return
+	}
+	clinic := clinics[0]
+
+	//now pass these details to service layer
+	if err := controller.Service.VerifyAddDoctorToClinicOTP(ctx, otpPayload.OTP, doctorMongoDBID, clinic.ID); err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusOK, &structs.IAppSuccess{
+		Message:    "Doctor Onboarded Successfully",
+		Data:       nil,
+		StatusCode: http.StatusOK,
+	})
+
 }

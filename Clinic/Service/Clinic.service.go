@@ -5,11 +5,14 @@ import (
 	interfaces "AlShifa/Clinic/Interfaces"
 	validators "AlShifa/Clinic/Validators"
 	"AlShifa/Clinic/models"
+	appInterfaces "AlShifa/Interfaces"
 	structs "AlShifa/Structs"
 	utils "AlShifa/Utils"
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"slices"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,17 +21,199 @@ import (
 )
 
 type ClinicService struct {
-	Repo interfaces.IRepository
+	OTPNotifier  appInterfaces.INotifier[string, string]
+	OTPGenerator func(uniquePrefix string) string
+	Repo         interfaces.IRepository
+	MongoClient  *mongo.Client
+	//this is the cache which will be used to store otp when a clinic wants to add a doctor
+	AddDoctorToClinicAuthCache appInterfaces.ICache[string, models.AddDoctorOtpPayload]
 }
 
-func NewClinicService(repo interfaces.IRepository) *ClinicService {
+func NewClinicService(repo interfaces.IRepository, mongoClient *mongo.Client, OTPNotifier appInterfaces.INotifier[string, string],
+	OTPGenerator func(uniquePrefix string) string,
+	authCache appInterfaces.ICache[string, models.AddDoctorOtpPayload]) *ClinicService {
 	return &ClinicService{
-		Repo: repo,
+		Repo:                       repo,
+		AddDoctorToClinicAuthCache: authCache,
+		OTPNotifier:                OTPNotifier,
+		OTPGenerator:               OTPGenerator,
+		MongoClient:                mongoClient,
 	}
 }
 
 ///this ensures this service layer implements all methods of service layer interface
 var _ interfaces.IService = (*ClinicService)(nil)
+
+//AddDoctorToClinic function generate otp for adding doctor to clinic this process needs another function or handler to verify otp and then the process is completed
+func (service *ClinicService) AddDoctorToClinic(ctx context.Context, clinicDetails models.AddDoctorToClinic) *structs.IAppError {
+
+	//now check if clinic exists with this clinicID
+	clinics, err := service.Repo.SearchClinic(ctx, bson.M{"_id": clinicDetails.ClinicID})
+	if err != nil {
+		return &structs.IAppError{
+			Message:    "Failed to Add Doctor To Clinic",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	if len(clinics) == 0 {
+		return &structs.IAppError{
+			Message:    "No Clinic Found With This Clinic",
+			Reason:     errors.New("no clinic found with clinic id").Error(),
+			ErrorObj:   errors.New("no clinic found with clinic id"),
+			StatusCode: http.StatusNotFound,
+		}
+	}
+
+	fmt.Print("reached here")
+	clinic := clinics[0]
+
+	//now check whether this doctorID exists or not
+	doctor, err := service.Repo.SearchDoctor(ctx, bson.M{"_id": clinicDetails.DoctorID})
+	if err != nil {
+		return &structs.IAppError{
+			Message:    "Failed to Add Doctor To Clinic",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	//now check whether doctor already has clinic or clinic has this doctor
+	doctorAlreadyAdded := slices.Contains(clinic.Doctors, doctor.ID)
+	if doctorAlreadyAdded {
+		return &structs.IAppError{
+			Message:    "Doctor Already Added To Clinic",
+			Reason:     errors.New("doctor is already added to clinic").Error(),
+			ErrorObj:   errors.New("doctor is already added to clinic"),
+			StatusCode: http.StatusForbidden,
+		}
+	}
+
+	//now send otp to doctor email through notification module and rest logic will be handled by otp verifier function
+	//prepare otp payload
+	uniquePrefix := fmt.Sprintf("%s:%s", clinicDetails.ClinicID.Hex(), clinicDetails.DoctorID.Hex())
+	otp := service.OTPGenerator(uniquePrefix)
+	otpPayload := models.AddDoctorOtpPayload{
+		OTP:    otp,
+		Expiry: time.Now().Add(utils.OTPExpiry),
+		ClinicDetails: &models.AddDoctorToClinic{
+			WorkingDays: clinicDetails.WorkingDays,
+			StartTime:   clinicDetails.EndTime,
+			EndTime:     clinicDetails.EndTime,
+			ClinicID:    clinicDetails.ClinicID,
+			DoctorID:    clinicDetails.DoctorID,
+		},
+	}
+
+	//now save this otp payload in cache
+	if err := service.AddDoctorToClinicAuthCache.Set(ctx, otp, otpPayload, utils.CacheTTL); err != nil {
+		return &structs.IAppError{
+			Message:    "Failed To Add Doctor To Clinic",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusForbidden,
+		}
+	}
+
+	//now send the otp to doctor email through notification module
+	notifierErr := service.OTPNotifier.SendNotification(doctor.Email, otp)
+	if notifierErr != nil {
+		return &structs.IAppError{
+			Message:    "Failed To Add Doctor To Clinic OTP Error",
+			Reason:     notifierErr.Error(),
+			ErrorObj:   notifierErr,
+			StatusCode: http.StatusForbidden,
+		}
+	}
+
+	//now send nil as error
+	return nil
+
+}
+
+func (service *ClinicService) VerifyAddDoctorToClinicOTP(ctx context.Context, otp string, doctorID primitive.ObjectID, clinicID primitive.ObjectID) *structs.IAppError {
+	//check whether in cache this otp exists or not
+	otpToFind := fmt.Sprintf("%s:%s:%s", clinicID.Hex(), doctorID.Hex(), otp)
+	fmt.Print(otpToFind)
+	otpPayload, otpExists, err := service.AddDoctorToClinicAuthCache.Get(ctx, otpToFind)
+	if !otpExists {
+		return &structs.IAppError{
+			Message:    "OTP Doesnt Exist",
+			ErrorObj:   errors.New("OTP doesnt exist"),
+			Reason:     "OTP doesnt exist",
+			StatusCode: 404,
+		}
+	}
+	if err != nil {
+		return &structs.IAppError{
+			Message:    "Failed to verify otp",
+			ErrorObj:   err,
+			Reason:     err.Error(),
+			StatusCode: 500,
+		}
+	}
+
+	//now in otp payload check whether this clinicid is present in otp payload or not
+	if otpPayload.ClinicDetails.ClinicID != clinicID {
+		return &structs.IAppError{
+			Message:    "OTP Verification failed",
+			ErrorObj:   errors.New("clinic Doesnt Match"),
+			Reason:     errors.New("clinic Doesnt Match").Error(),
+			StatusCode: 400,
+		}
+	}
+
+	//now check whether otp expiry hasnt reached if yes return error
+	if time.Now().After(otpPayload.Expiry) {
+		return &structs.IAppError{
+			Message:    "OTP Expired",
+			ErrorObj:   errors.New("OTP Expired"),
+			Reason:     errors.New("OTP Expired").Error(),
+			StatusCode: 400,
+		}
+	}
+
+	//now as everything is ok now using transaction add doctorID to clinic and also add clinicID to doctor data in database
+	session, err := service.MongoClient.StartSession()
+	if err != nil {
+		return &structs.IAppError{
+			Message:    "Failed to Verify Otp",
+			ErrorObj:   err,
+			Reason:     err.Error(),
+			StatusCode: 500,
+		}
+	}
+	defer session.EndSession(ctx)
+
+	//actual transaction function in which logic to add doctor to clinic resides
+	transactionFn := func(ctx mongo.SessionContext) (any, error) {
+		if err := service.Repo.AddDoctorToClinic(ctx, *otpPayload.ClinicDetails); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	_, transactionErr := session.WithTransaction(ctx, transactionFn)
+	if transactionErr != nil {
+		return &structs.IAppError{
+			Message:    "OTP verification Failed",
+			ErrorObj:   transactionErr,
+			Reason:     transactionErr.Error(),
+			StatusCode: 500,
+		}
+	}
+
+	//here after verifying remove otp from redis also
+	if err := service.AddDoctorToClinicAuthCache.Delete(ctx, otp); err != nil {
+		fmt.Print("Failed to remove otp aftr verification")
+	}
+
+	return nil
+
+}
 
 func (service *ClinicService) RegisterClinic(ctx context.Context, ownerID string, clinicDetails models.Clinic) *structs.IAppError {
 	//first convert ownerID to proper mongodb id
@@ -107,20 +292,20 @@ func (service *ClinicService) RegisterClinicOwner(ctx context.Context, ownerDeta
 func (service *ClinicService) SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError) {
 	clinics, err := service.Repo.SearchClinic(ctx, filter)
 	if err != nil {
-		return nil, utils.ReturnAppError(err, 500, "Unable To Fetch Clinic details", "Server Error")
+		return nil, utils.ReturnAppError(err, 500, "Unable To Fetch Clinic details", err.Error())
 	}
 
 	return clinics, nil
 }
 
 func (service *ClinicService) SearchOwner(ctx context.Context, filter bson.M) ([]models.Owner, *structs.IAppError) {
-	owner, err := service.Repo.GetOwnerDetails(ctx, filter)
+	owners, err := service.Repo.GetOwnerDetails(ctx, filter)
 	if err != nil {
-		fmt.Print(err, owner)
+		fmt.Print(err, owners)
 		return nil, utils.ReturnAppError(err, 500, "Unable To Fetch Owner details", "Server Error")
 	}
 
-	return owner, nil
+	return owners, nil
 }
 
 func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.Doctor) *structs.IAppError {
@@ -164,13 +349,23 @@ func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.
 	return nil
 }
 
-func (service *ClinicService) SearchDoctor(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, error) {
+func (service *ClinicService) SearchDoctor(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, *structs.IAppError) {
 	// //here validate filters
 	// allowedFilters := []string{"_id", "name", "mobile", "email"}
 	// for keys := range filter {
 
 	// }
-	return service.Repo.SearchDoctors(ctx, filter)
+	doctors, err := service.Repo.SearchDoctors(ctx, filter)
+	if err != nil {
+		return nil, &structs.IAppError{
+			Message:    "Failed to Fetch Doctors",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	return doctors, nil
 }
 
 func (service *ClinicService) LoginClinicOwner(ctx context.Context, email string, password string) (string, *structs.IAppError) {

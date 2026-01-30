@@ -4,13 +4,15 @@ import (
 	clinic "AlShifa/Clinic"
 	internals "AlShifa/Internals"
 	users "AlShifa/Users"
+	utils "AlShifa/Utils"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
 
-	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 )
 
 func printMemUsage() {
@@ -24,12 +26,9 @@ func printMemUsage() {
 }
 
 func main() {
+
 	printMemUsage()
-
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("error loading .env file:", err)
-	}
-
+	utils.LoadEnvs()
 	port := os.Getenv("PORT")
 
 	if port == "" {
@@ -43,9 +42,45 @@ func main() {
 		log.Fatal("Failed to connect to mongodb", mongoErr)
 	}
 
+	//redis initialization
+	//get redis url
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		log.Fatal("REDIS url is missing in env file")
+	}
+
+	//get redis username
+	redisUsername := os.Getenv("REDIS_USERNAME")
+	if redisUsername == "" {
+		log.Fatal("redisUsername is missing in env file")
+	}
+
+	//get redis passowrd
+	redisUserPassword := os.Getenv("REDIS_PASSWORD")
+	if redisUserPassword == "" {
+		log.Fatal("REDIS userPassword is missing in env file")
+	}
+
+	//create redis client with all credientials
+	redisInstance := *redis.NewClient(&redis.Options{
+		Addr:     redisURL,
+		Password: redisUserPassword,
+		Username: redisUsername,
+	})
+
+	// Ping the Redis server to verify the connection
+	_, err := redisInstance.Ping(context.Background()).Result()
+	if err != nil {
+		log.Fatalf("Could not connect to Redis: %v", err)
+	}
+
+	fmt.Println("REDIS Connected successfully")
+	///----------------------redis initialization end
+
 	appStore := internals.App{
 		DB:     mongoClient.Database("AlShifa"),
 		Server: http.NewServeMux(),
+		Redis:  &redisInstance,
 	}
 
 	//initialise modules

@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // IService interface contains functions that clinic service layer must implement( to beused by handlers)
@@ -15,4 +16,9 @@ type IService interface {
 	SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError)
 	LoginClinicOwner(ctx context.Context, email string, password string) (string, *structs.IAppError)
 	LoginDoctor(ctx context.Context, email string, password string) (string, *structs.IAppError)
+	SearchDoctor(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, *structs.IAppError)
+	AddDoctorToClinic(ctx context.Context, clinicDetails models.AddDoctorToClinic) *structs.IAppError
+	SearchOwner(ctx context.Context, filter bson.M) ([]models.Owner, *structs.IAppError)
+	RegisterDoctor(ctx context.Context, doctor models.Doctor) *structs.IAppError
+	VerifyAddDoctorToClinicOTP(ctx context.Context, otp string, doctorID primitive.ObjectID, clinicID primitive.ObjectID) *structs.IAppError
 }

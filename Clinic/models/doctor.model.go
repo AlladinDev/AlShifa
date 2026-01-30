@@ -7,7 +7,6 @@ import (
 )
 
 type ClinicDetails struct {
-	ID          primitive.ObjectID `json:"id" bson:"_id"`
 	StartTime   time.Time          `json:"startTiming" bson:"startTiming"`
 	EndTime     time.Time          `json:"endTime" bson:"endTime"`
 	Clinic      primitive.ObjectID `json:"clinic" bson:"clinic"`

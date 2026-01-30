@@ -229,3 +229,45 @@ func (r *Repo) SearchDoctor(ctx context.Context, filter bson.M) (models.Doctor, 
 	err := result.Decode(&doctor)
 	return doctor, err
 }
+
+func (r *Repo) AddDoctorToClinic(ctx mongo.SessionContext, clinicDetails models.AddDoctorToClinic) error {
+	// Step 1: set empty array if null
+	r.DB.Collection("Doctor").UpdateOne(
+		ctx,
+		bson.M{"_id": clinicDetails.DoctorID, "clinics": nil},
+		bson.M{"$set": bson.M{"clinics": bson.A{}}},
+	)
+
+	doctorUpdationRes := r.DB.Collection("Doctor").FindOneAndUpdate(ctx, bson.M{"_id": clinicDetails.DoctorID}, bson.M{
+		"$push": bson.M{
+			"clinics": models.ClinicDetails{
+				StartTime:   clinicDetails.StartTime,
+				EndTime:     clinicDetails.EndTime,
+				WorkingDays: clinicDetails.WorkingDays,
+				Clinic:      clinicDetails.ClinicID,
+			},
+		},
+	})
+
+	if doctorUpdationRes.Err() != nil {
+		return doctorUpdationRes.Err()
+	}
+	// Step 1: set empty array if null for doctors in clinic
+	r.DB.Collection("Clinic").UpdateOne(
+		ctx,
+		bson.M{"_id": clinicDetails.ClinicID, "doctors": nil},
+		bson.M{"$set": bson.M{"doctors": bson.A{}}},
+	)
+
+	clinicUpdationRes := r.DB.Collection("Clinic").FindOneAndUpdate(ctx, bson.M{"_id": clinicDetails.ClinicID}, bson.M{
+		"$push": bson.M{
+			"doctors": clinicDetails.DoctorID,
+		},
+	})
+
+	if clinicUpdationRes.Err() != nil {
+		return doctorUpdationRes.Err()
+	}
+
+	return nil
+}

@@ -7,6 +7,11 @@ const (
 	APIVERSION     = "/v1"
 	JwtExpiryTime  = time.Hour * 24 * 7
 
+	//otp expiry time
+	OTPExpiry               = 5 * time.Minute
+	DoctorAddToClinicOTPKey = "DoctorAddToClinicOTPKey"
+	CacheTTL                = OTPExpiry
+
 	//Roles
 	RoleUser        = "User"
 	RoleAdmin       = "Admin"
