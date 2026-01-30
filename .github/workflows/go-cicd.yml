@@ -24,6 +24,11 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+   # 🔑 Convert secret → environment variables
+      - name: Load env vars
+        run: |
+          echo "${{ secrets.ENVS_FILE }}" >> $GITHUB_ENV
+
       - name: Run tests
         run: go test ./... -v
 

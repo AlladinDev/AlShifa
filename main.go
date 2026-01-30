@@ -28,7 +28,11 @@ func printMemUsage() {
 func main() {
 
 	printMemUsage()
-	utils.LoadEnvs()
+
+	if os.Getenv("APP_ENV") != "production" {
+		utils.LoadEnvs()
+	}
+
 	port := os.Getenv("PORT")
 
 	if port == "" {
