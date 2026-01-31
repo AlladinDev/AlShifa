@@ -1,22 +1,62 @@
-name: Go CI
+# name: Go CI
+
+# on:
+#   push:
+#     branches: [ "main" ]
+ 
+# jobs:
+#   build-and-test:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+        
+
+#       - name: Set up Go
+#         uses: actions/setup-go@v5
+#         with:
+#           go-version: '1.25.1' # or whatever version you use
+
+#       - name: Verify Go version
+#         run: go version
+
+#       - name: Download dependencies
+#         run: go mod download
+
+#    # 🔑 Convert secret → environment variables
+#       - name: Load env vars
+#         run: |
+#           echo "${{ secrets.ENVS_FILE }}" >> $GITHUB_ENV
+
+#       - name: Run tests
+#         run: go test ./... -v
+
+#       - name: Build
+#         run: go build -v ./...
+name: Go CI/CD
 
 on:
   push:
-    branches: [ "main" ]
- 
+    branches: ["main"]
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
+    env:
+      # load env secrets for testing
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      PORT: ${{ secrets.PORT }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.1' # or whatever version you use
+          go-version: '1.25.1'
 
       - name: Verify Go version
         run: go version
@@ -24,13 +64,30 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-   # 🔑 Convert secret → environment variables
-      - name: Load env vars
+      - name: Load env vars from secret
         run: |
           echo "${{ secrets.ENVS_FILE }}" >> $GITHUB_ENV
 
       - name: Run tests
         run: go test ./... -v
 
-      - name: Build
-        run: go build -v ./...
+      - name: Build Go binary
+        run: go build -o myapp ./...
+
+  deploy-to-ec2:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          scp myapp ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/myapp/myapp
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            sudo systemctl restart myapp
+          EOF
