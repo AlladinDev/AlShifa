@@ -38,7 +38,7 @@ func main() {
 	if port == "" {
 		port = "8000"
 	}
-	addr := "0.0.0.0:" + port
+	addr := ":" + port
 
 	//call monogodb connect function
 	mongoClient, mongoErr := internals.ConnectMongo(os.Getenv("MONGODB_URL"))
