@@ -1,39 +1,4 @@
-# name: Go CI
 
-# on:
-#   push:
-#     branches: [ "main" ]
- 
-# jobs:
-#   build-and-test:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-        
-
-#       - name: Set up Go
-#         uses: actions/setup-go@v5
-#         with:
-#           go-version: '1.25.1' # or whatever version you use
-
-#       - name: Verify Go version
-#         run: go version
-
-#       - name: Download dependencies
-#         run: go mod download
-
-#    # 🔑 Convert secret → environment variables
-#       - name: Load env vars
-#         run: |
-#           echo "${{ secrets.ENVS_FILE }}" >> $GITHUB_ENV
-
-#       - name: Run tests
-#         run: go test ./... -v
-
-#       - name: Build
-#         run: go build -v ./...
 name: Go CI/CD
 
 on:
@@ -53,7 +18,7 @@ jobs:
           go-version: '1.25.1'
 
       - name: Load env vars from secret
-        run: echo "${{ secrets.ENVS_FILE }}" >> $GITHUB_ENV
+        run: echo "${{ secrets.ENV_FILE }}" >> $GITHUB_ENV
 
       - name: Download dependencies
         run: go mod download
@@ -62,23 +27,6 @@ jobs:
         run: go test ./... -v
 
       - name: Build binary
-        run: go build -o myapp .
+        run: go build 
 
-  deploy-to-ec2:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    steps:
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Upload binary to EC2
-        run: |
-          scp -i ~/.ssh/id_ed25519 myapp ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/myapp
-
-      - name: Restart app on EC2
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "sudo systemctl restart myapp"
+ 

@@ -29,7 +29,9 @@ func main() {
 
 	printMemUsage()
 
-	if os.Getenv("APP_ENV") != "production" {
+	log.Printf("App running mode:  APP_ENV is = '%s'\n", os.Getenv("APP_ENV"))
+
+	if os.Getenv("APP_ENV") != "github_actions" {
 		utils.LoadEnvs()
 	}
 
