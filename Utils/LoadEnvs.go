@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -10,7 +11,8 @@ import (
 )
 
 func LoadEnvs() {
-	environment := os.GetEnv("APP_ENV")
+
+	environment := os.Getenv("APP_ENV")
 
 	if environment == "github_actions" {
 		return
