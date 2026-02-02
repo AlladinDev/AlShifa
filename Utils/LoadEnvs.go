@@ -10,6 +10,12 @@ import (
 )
 
 func LoadEnvs() {
+	environment := os.GetEnv("APP_ENV")
+
+	if environment == "github_actions" {
+		return
+	}
+
 	_, b, _, _ := runtime.Caller(0)
 
 	basePath := filepath.Dir(b)
