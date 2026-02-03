@@ -11,7 +11,7 @@ func TestRealEmailSending(t *testing.T) {
 	//compulsory load envs first
 	// os.Clearenv()
 	if os.Getenv("APP_ENV") != "production" {
-		utils.LoadEnvs()
+		utils.LoadEnvs("../.env")
 	}
 
 	//appEmail := os.Getenv("APP_EMAIL")

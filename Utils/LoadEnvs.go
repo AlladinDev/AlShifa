@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
-	"runtime"
 
 	"github.com/joho/godotenv"
 )
 
-func LoadEnvs() {
+func LoadEnvs(path string) {
 
 	environment := os.Getenv("APP_ENV")
 
@@ -18,10 +16,7 @@ func LoadEnvs() {
 		return
 	}
 
-	_, b, _, _ := runtime.Caller(0)
-
-	basePath := filepath.Dir(b)
-	if err := godotenv.Load(filepath.Join(basePath, ".env")); err != nil {
+	if err := godotenv.Load(path); err != nil {
 		log.Fatal("error loading .env file:", err)
 	}
 

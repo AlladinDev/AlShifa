@@ -31,7 +31,7 @@ func main() {
 
 	log.Printf("App running mode:  APP_ENV is = '%s'\n", os.Getenv("APP_ENV"))
 
-	utils.LoadEnvs()
+	utils.LoadEnvs(".env")
 
 	port := os.Getenv("PORT")
 
