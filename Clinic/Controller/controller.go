@@ -269,7 +269,7 @@ func (controller *Controller) SearchDoctor(res http.ResponseWriter, req *http.Re
 		return
 	}
 
-	utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
+	_ = utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
 		Message:    "Successfully Fetched Details",
 		Data:       doctors,
 		StatusCode: 200,
@@ -474,5 +474,32 @@ func (controller *Controller) VerifyAddDoctorToClinicOtp(res http.ResponseWriter
 		Data:       nil,
 		StatusCode: http.StatusOK,
 	})
+
+}
+
+func (controller *Controller) AddAppointment(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+	//first parse the details
+	var appointmentDetails models.Appointment
+	if err := json.NewDecoder(req.Body).Decode(&appointmentDetails); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, http.StatusBadRequest, "Invalid json", err.Error()))
+		return
+	}
+
+	//now do the validations
+	if err := validators.ValidateAppointmentDetails(&appointmentDetails, req.Context()); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, http.StatusBadRequest, "Invalid json", "Invalid details"))
+		return
+	}
+
+	//now call the service layer method
+	appointment, err := controller.Service.AddAppointment(ctx, appointmentDetails)
+	if err != nil {
+		_ = utils.WriteResponse(res, http.StatusInternalServerError, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to add appointment", err.Error()))
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusCreated, utils.ReturnAppSuccess(http.StatusCreated, "Appointment Booked", appointment))
 
 }

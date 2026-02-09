@@ -2,6 +2,6 @@
 package structs
 
 type LoginDetails struct {
-	Email    string `json:"email" bson:"email"`
+	Mobile   int    `json:"mobile" bson:"mobile"`
 	Password string `json:"password" bson:"password"`
 }

@@ -21,4 +21,5 @@ type IService interface {
 	SearchOwner(ctx context.Context, filter bson.M) ([]models.Owner, *structs.IAppError)
 	RegisterDoctor(ctx context.Context, doctor models.Doctor) *structs.IAppError
 	VerifyAddDoctorToClinicOTP(ctx context.Context, otp string, doctorID primitive.ObjectID, clinicID primitive.ObjectID) *structs.IAppError
+	AddAppointment(ctx context.Context, appointmentDetails models.Appointment) (*models.Appointment, *structs.IAppError)
 }

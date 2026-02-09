@@ -28,4 +28,5 @@ type Clinic struct {
 	OwnerDetails     *Owner                `bson:"ownerDetails,omitempty"`
 	DoctorDetails    []Doctor              `bson:"doctorDetails,omitempty"`
 	PlanType         string                `json:"planType" bson:"planType"`
+	MaxAppointments  int                   `json:"maxAppointments" bson:"maxAppointments"`
 }

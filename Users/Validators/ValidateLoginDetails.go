@@ -4,8 +4,6 @@ package validators
 import (
 	structs "AlShifa/Users/Structs"
 	utils "AlShifa/Utils"
-	"regexp"
-	"strings"
 	"unicode"
 )
 
@@ -18,14 +16,9 @@ func ValidateLoginDetails(l *structs.LoginDetails) map[string]string {
 
 	errors := make(map[string]string)
 
-	// ---------- Email ----------
-	email := strings.TrimSpace(strings.ToLower(l.Email))
-	if email == "" {
-		errors["email"] = "email is required"
-	} else if len(email) > utils.MaxEmailLength {
-		errors["email"] = "email is too long"
-	} else if !regexp.MustCompile(utils.EmailRegex).MatchString(email) {
-		errors["email"] = "invalid email format"
+	//mobile validation
+	if l.Mobile < 4000000000 {
+		errors["mobile"] = "Valid 10 digit mobile number required"
 	}
 
 	// ---------- Password ----------

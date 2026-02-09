@@ -4,7 +4,6 @@ import (
 	models "AlShifa/Users/Models"
 	utils "AlShifa/Utils"
 	"fmt"
-	"regexp"
 	"strings"
 	"unicode"
 )
@@ -31,14 +30,6 @@ func ValidateUser(u *models.User) map[string]string {
 				break
 			}
 		}
-	}
-
-	// ---------- Email ----------
-	email := strings.TrimSpace(strings.ToLower(u.Email))
-	if email == "" {
-		errors["email"] = "email is required"
-	} else if !regexp.MustCompile(utils.EmailRegex).MatchString(email) {
-		errors["email"] = "invalid email format"
 	}
 
 	// ---------- Password ----------
@@ -74,11 +65,6 @@ func ValidateUser(u *models.User) map[string]string {
 		}
 	}
 
-	// ---------- Age ----------
-	if u.Age < utils.MinAge || u.Age > utils.MaxAge {
-		errors["age"] = fmt.Sprintf("age must be between  %d and %d", utils.MinAge, utils.MaxAge)
-	}
-
 	// ---------- Address ----------
 	address := strings.TrimSpace(u.Address)
 	if address == "" {
@@ -95,14 +81,6 @@ func ValidateUser(u *models.User) map[string]string {
 		errors["mobile"] = "mobile number is required"
 	} else if len(mobile) != utils.MobileLength {
 		errors["mobile"] = "mobile number must be 10 digits"
-	}
-
-	// ---------- Pincode ----------
-	pincode := fmt.Sprintf("%d", u.Pincode)
-	if u.Pincode == 0 {
-		errors["pincode"] = "pincode is required"
-	} else if len(pincode) != utils.PincodeLength {
-		errors["pincode"] = "pincode must be 6 digits"
 	}
 
 	// ---------- Final ----------

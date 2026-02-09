@@ -253,14 +253,17 @@ func (service *ClinicService) RegisterClinic(ctx context.Context, ownerID string
 func (service *ClinicService) RegisterClinicOwner(ctx context.Context, ownerDetails models.Owner) *structs.IAppError {
 
 	//now check if email or mobile exists
-	_, ownerMongoDBErr := service.Repo.GetOwnerDetails(ctx, bson.M{"$or": []bson.M{
+	owners, ownerMongoDBErr := service.Repo.GetOwnerDetails(ctx, bson.M{"$or": []bson.M{
 		{"email": ownerDetails.Email},
 		{"mobile": ownerDetails.Mobile},
 	}})
 
-	if ownerMongoDBErr == nil {
-		fmt.Print("issue ", ownerMongoDBErr)
-		return utils.ReturnAppError(ownerMongoDBErr, 400, "User Already Exists", "Duplicate Email or PhoneNumber")
+	if ownerMongoDBErr != nil {
+		return utils.ReturnAppError(ownerMongoDBErr, http.StatusInternalServerError, "Failed to Register Owner", ownerMongoDBErr.Error())
+	}
+
+	if len(owners) > 0 {
+		return utils.ReturnAppError(ownerMongoDBErr, http.StatusForbidden, "This email or number already exists", "This email or mobile already exists")
 	}
 
 	//now hash the password
@@ -408,4 +411,49 @@ func (service *ClinicService) LoginDoctor(ctx context.Context, email string, pas
 		return "", utils.ReturnAppError(err, 500, "Login Failed", "Server Error")
 	}
 	return token, nil
+}
+
+func (service *ClinicService) AddAppointment(ctx context.Context, appointmentDetails models.Appointment) (*models.Appointment, *structs.IAppError) {
+	//here check whether this doctorid and clinicid exists or not  and userid will be injected by jwt middleware
+
+	//now do the searches
+	doctors, err := service.SearchDoctor(ctx, bson.M{"_id": appointmentDetails.Doctor})
+	if err != nil {
+		return nil, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to add appoinment", err.Error())
+	}
+
+	if len(doctors) == 0 {
+		return nil, utils.ReturnAppError(errors.New("no doctor exists with this id"), http.StatusInternalServerError, "Failed to add appoinment", "no doctor exists with this id")
+	}
+
+	//now search for this clinic
+	clinics, err := service.SearchClinic(ctx, bson.M{"_id": appointmentDetails.Clinic})
+	if err != nil {
+		return nil, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to add appoinment", err.Error())
+	}
+
+	if len(clinics) == 0 {
+		return nil, utils.ReturnAppError(errors.New("no clinic exists with this id"), http.StatusInternalServerError, "Failed to add appoinment", "no clinic exists with this id")
+	}
+
+	//get the first clinic
+	clinic := clinics[0]
+
+	//here check this doctor id must be present in the clinic.doctors array means it must be onboarded in this clinic
+	if !slices.Contains(clinic.Doctors, appointmentDetails.Doctor) {
+		return nil, utils.ReturnAppError(errors.New("this doctor is not onboarded in this clinic"), http.StatusInternalServerError, "Failed to add appoinment", "this doctor is not onboarded in this clinic")
+	}
+
+	//now add some defaults like status date
+	appointmentDetails.RegistrationDate = time.Now()
+	appointmentDetails.Status = "pending"
+	appointmentDetails.ID = primitive.NewObjectID()
+
+	//now call the repo method for storing this appointment
+	fmt.Print("limit", clinic.MaxAppointments)
+	appointmentCreated, appointmentErr := service.Repo.AddAppointment(ctx, clinic.MaxAppointments, appointmentDetails)
+	if appointmentErr != nil {
+		return nil, utils.ReturnAppError(appointmentErr, http.StatusInternalServerError, "Failed to add appointment", appointmentErr.Error())
+	}
+	return appointmentCreated, nil
 }

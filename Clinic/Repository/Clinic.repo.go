@@ -4,6 +4,7 @@ package repository
 import (
 	"AlShifa/Clinic/models"
 	"context"
+	"errors"
 	"fmt"
 
 	interfaces "AlShifa/Clinic/Interfaces"
@@ -11,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Repo is the MongoDB implementation of the IRepository interface.
@@ -23,13 +25,34 @@ var _ interfaces.IRepository = (*Repo)(nil)
 
 // NewRepository creates a new repository with the specified database and collection name.
 func NewRepository(db *mongo.Database) interfaces.IRepository {
+
+	//here call InitialiseIndexes for Slot table
+	//because it we call this initialiseIndexes in module initialisation function developer may forget to call it and it will corrupt db in edge cases
+	if err := InitialiseIndexes(db.Collection("Slot")); err != nil {
+		panic(fmt.Sprintf("Failed to create index for slot collection error is %v :", err))
+	}
+
+	fmt.Println("Indexes created successfully for clinic repo")
 	return &Repo{
 		DB: db,
 	}
+
+}
+
+func InitialiseIndexes(collection *mongo.Collection) error {
+	//call create index  function for slot  document
+	if err := CreateSlotIndex(collection, bson.D{
+		{Key: "bookingDate", Value: 1},
+		{Key: "doctorID", Value: 1},
+		{Key: "clinicID", Value: 1},
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *Repo) RegisterClinicOwner(ctx context.Context, owner models.Owner) error {
-	fmt.Print("inside RegisterClinicOwner")
 	_, err := r.DB.Collection("Owner").InsertOne(ctx, owner)
 	return err
 }
@@ -270,4 +293,69 @@ func (r *Repo) AddDoctorToClinic(ctx mongo.SessionContext, clinicDetails models.
 	}
 
 	return nil
+}
+
+func (r *Repo) AddAppointment(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (*models.Appointment, error) {
+	//here first update slot document using upsert to ensure if it is not present create it if present updates its slots booked by 1
+	session, err := r.DB.Client().StartSession()
+	if err != nil {
+		return nil, err
+	}
+	defer session.EndSession(ctx)
+
+	//this is the transaction function which will contain db operations logic which must be executed in single operation
+	transactionFn := func(sessCtx mongo.SessionContext) (any, error) {
+		slotFilter := bson.D{
+			{Key: "bookingDate", Value: appointmentDetails.AppointmentDate},
+			{Key: "doctorID", Value: appointmentDetails.Doctor},
+			{Key: "clinicID", Value: appointmentDetails.Clinic},
+			{Key: "slotsBooked", Value: bson.M{
+				"$lt": maxAppointments,
+			}},
+		}
+
+		updateQuery := bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "slotsBooked", Value: 1},
+			}},
+			{Key: "$setOnInsert", Value: bson.D{
+				{Key: "bookingDate", Value: appointmentDetails.AppointmentDate},
+				{Key: "doctorID", Value: appointmentDetails.Doctor},
+				{Key: "clinicID", Value: appointmentDetails.Clinic},
+			}},
+		}
+
+		//create the update options to update slot first then get its slotsBooked and assign it to current appointment as slot
+		updateOptions := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+		slotUpdationRes := r.DB.Collection("Slot").FindOneAndUpdate(sessCtx, slotFilter, updateQuery, updateOptions)
+		var slotUpdated models.Slot
+		if err := slotUpdationRes.Decode(&slotUpdated); err != nil {
+			return nil, err
+		}
+
+		//here get the updated slotsBooked and set it in appointment details it will represent the slot for this appointment
+		appointmentDetails.Slot = slotUpdated.SlotsBooked
+
+		//now save the appointment also
+		_, err := r.DB.Collection("Appointment").InsertOne(sessCtx, appointmentDetails)
+		if err != nil {
+			return nil, err
+		}
+
+		return appointmentDetails, nil
+	}
+
+	res, transactionErr := session.WithTransaction(ctx, transactionFn)
+	if transactionErr != nil {
+		return nil, transactionErr
+	}
+
+	//now try to convert res into appointment model
+	appointmentCreated, ok := res.(models.Appointment)
+	if !ok {
+		return nil, errors.New("failed to return appointment Created")
+	}
+
+	return &appointmentCreated, nil
+
 }

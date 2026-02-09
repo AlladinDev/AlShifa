@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -106,7 +105,7 @@ func TestRegisterUser(t *testing.T) {
 
 func ReturnLoginDetails() string {
 	return `{
-	"email":"Saqlain@gmail.com",
+	"mobile":9797798243,
 	"password":"Saqlain@123"
 	}`
 }
@@ -124,12 +123,12 @@ func TestUserLogin(t *testing.T) {
 			Usecase:            "User Login failure for invalid json",
 			ExpectedStatusCode: http.StatusBadRequest,
 			mockService: &MockUserService{
-				LoginUserFn: func(ctx context.Context, email, password string) (string, *structs.IAppError) {
+				LoginUserFn: func(ctx context.Context, mobile int, password string) (string, *structs.IAppError) {
 					return "Logged in", nil
 				},
 			},
 			loginDetails: `{
-	        email":"Saqlain@gmail.com",
+	        mobile":9797798243,
 	        "password:"Saqlain@123"
 	       }`,
 		},
@@ -138,7 +137,7 @@ func TestUserLogin(t *testing.T) {
 			Usecase:            "user login successfull when everything is ok",
 			ExpectedStatusCode: http.StatusOK,
 			mockService: &MockUserService{
-				LoginUserFn: func(ctx context.Context, email, password string) (string, *structs.IAppError) {
+				LoginUserFn: func(ctx context.Context, mobile int, password string) (string, *structs.IAppError) {
 					return "Logged in", nil
 				},
 			},
@@ -149,7 +148,7 @@ func TestUserLogin(t *testing.T) {
 			Usecase:            "user login failure when mock service returns error",
 			ExpectedStatusCode: http.StatusInternalServerError,
 			mockService: &MockUserService{
-				LoginUserFn: func(ctx context.Context, email, password string) (string, *structs.IAppError) {
+				LoginUserFn: func(ctx context.Context, mobile int, password string) (string, *structs.IAppError) {
 					return "", &structs.IAppError{
 						Message:    "Error from mock service layer",
 						StatusCode: http.StatusInternalServerError,
@@ -180,18 +179,17 @@ func TestUserLogin(t *testing.T) {
 
 func ReturnDummyUser() models.User {
 	return models.User{
-		Name:             "Saqlain mushtaq",
-		Age:              23,
-		Address:          "Soura",
-		Password:         "",
-		Email:            "Saqlain@gmail.com",
-		Mobile:           9797798243,
-		Pincode:          190011,
-		RegistrationDate: time.Now(),
-		ID:               primitive.NewObjectID(),
-		AppointmentIDS:   nil,
-		Appointments:     nil,
-		Role:             "User",
+		Name: "Saqlain mushtaq",
+
+		Address:  "Soura",
+		Password: "",
+
+		Mobile: 9797798243,
+
+		ID:             primitive.NewObjectID(),
+		AppointmentIDS: nil,
+		Appointments:   nil,
+		Role:           "User",
 	}
 
 }

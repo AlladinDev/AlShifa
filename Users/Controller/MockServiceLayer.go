@@ -12,7 +12,7 @@ import (
 
 type MockUserService struct {
 	AddUserFn        func(ctx context.Context, user models.User) *structs.IAppError
-	LoginUserFn      func(ctx context.Context, email, password string) (string, *structs.IAppError)
+	LoginUserFn      func(ctx context.Context, mobile int, password string) (string, *structs.IAppError)
 	SearchUserFn     func(ctx context.Context, filter bson.M) (*models.User, *structs.IAppError)
 	SearchUserByIDFn func(ctx context.Context, userID primitive.ObjectID) (*models.User, *structs.IAppError)
 }
@@ -26,9 +26,9 @@ func (m *MockUserService) AddUser(ctx context.Context, user models.User) *struct
 	return nil
 }
 
-func (m *MockUserService) LoginUser(ctx context.Context, email, password string) (string, *structs.IAppError) {
+func (m *MockUserService) LoginUser(ctx context.Context, mobile int, password string) (string, *structs.IAppError) {
 	if m.LoginUserFn != nil {
-		return m.LoginUserFn(ctx, email, password)
+		return m.LoginUserFn(ctx, mobile, password)
 	}
 	return "", nil
 }

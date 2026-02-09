@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -32,7 +31,7 @@ func ReturnNewService(repo interfaces.IRepository) *Service {
 func (s *Service) AddUser(ctx context.Context, user models.User) *structs.IAppError {
 	//first check if this user exists by this email or mobile number or not
 
-	userExists, userExistsDBErr := s.repo.SearchUser(ctx, bson.M{"email": user.Email, "mobile": user.Mobile})
+	userExists, userExistsDBErr := s.repo.SearchUser(ctx, bson.M{"mobile": user.Mobile})
 	//if userExistsDBErr is not nill it means either some db error or no document found error ,handle db related error only if no document found error it is ok
 	if userExistsDBErr != nil {
 		if userExistsDBErr != mongo.ErrNoDocuments {
@@ -47,15 +46,14 @@ func (s *Service) AddUser(ctx context.Context, user models.User) *structs.IAppEr
 
 	if userExists != nil {
 		return &structs.IAppError{
-			Message:    "This Email or Mobile Already Exists",
+			Message:    "This  Mobile Already Exists",
 			StatusCode: 400,
-			Reason:     "Duplicate Email or Mobile",
+			Reason:     "Duplicate  Mobile",
 			ErrorObj:   errors.New("user already exists"),
 		}
 	}
 
 	//add default things like userId and registrationDate and null values like appointments
-	user.RegistrationDate = time.Now()
 	user.ID = primitive.NewObjectID()
 	user.AppointmentIDS = nil
 	user.Appointments = nil
@@ -125,8 +123,8 @@ func (s *Service) SearchUser(ctx context.Context, filter bson.M) (*models.User, 
 	return user, nil
 }
 
-func (s *Service) LoginUser(ctx context.Context, email string, password string) (string, *structs.IAppError) {
-	user, err := s.repo.SearchUser(ctx, bson.M{"email": email})
+func (s *Service) LoginUser(ctx context.Context, mobile int, password string) (string, *structs.IAppError) {
+	user, err := s.repo.SearchUser(ctx, bson.M{"mobile": mobile})
 	if err != nil {
 		fmt.Print(err)
 		if err == mongo.ErrNoDocuments {
@@ -158,9 +156,9 @@ func (s *Service) LoginUser(ctx context.Context, email string, password string) 
 	}
 	if !passwordMatches {
 		return "", &structs.IAppError{
-			Message:    "Invalid Email or Password",
+			Message:    "Invalid mobile or Password",
 			StatusCode: http.StatusBadRequest,
-			ErrorObj:   errors.New("login failed invalid email or password"),
+			ErrorObj:   errors.New("login failed invalid mobile or password"),
 			Reason:     "invalid details",
 		}
 	}

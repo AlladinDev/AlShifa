@@ -131,7 +131,7 @@ func (controller *UserController) LoginUser(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	jwtToken, err := controller.Service.LoginUser(ctx, loginDetails.Email, loginDetails.Password)
+	jwtToken, err := controller.Service.LoginUser(ctx, loginDetails.Mobile, loginDetails.Password)
 	if err != nil {
 		_ = utils.WriteResponse(res, err.StatusCode, err)
 		return

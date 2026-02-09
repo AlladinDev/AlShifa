@@ -13,5 +13,5 @@ type IService interface {
 	AddUser(ctx context.Context, user models.User) *structs.IAppError
 	SearchUserByID(ctx context.Context, userID primitive.ObjectID) (*models.User, *structs.IAppError)
 	SearchUser(ctx context.Context, filter bson.M) (*models.User, *structs.IAppError)
-	LoginUser(ctx context.Context, email string, password string) (string, *structs.IAppError)
+	LoginUser(ctx context.Context, mobile int, password string) (string, *structs.IAppError)
 }

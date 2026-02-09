@@ -21,6 +21,7 @@ type MockService struct {
 	SearchOwnerFn             func(ctx context.Context, filter bson.M) ([]models.Owner, *structs.IAppError)
 	RegisterDoctorFn          func(ctx context.Context, doctor models.Doctor) *structs.IAppError
 	VerifyAddDoctorToClinicFn func(ctx context.Context, otp string, doctorID primitive.ObjectID, clinicID primitive.ObjectID) *structs.IAppError
+	AddAppointmentFn          func(ctx context.Context, appointmentDetails models.Appointment) *structs.IAppError
 }
 
 // ---- Interface Methods ----
@@ -90,6 +91,13 @@ func (m *MockService) SearchOwner(ctx context.Context, filter bson.M) ([]models.
 func (m *MockService) RegisterDoctor(ctx context.Context, doctor models.Doctor) *structs.IAppError {
 	if m.RegisterDoctorFn != nil {
 		return m.RegisterDoctorFn(ctx, doctor)
+	}
+	return nil
+}
+
+func (m *MockService) AddAppointment(ctx context.Context, appointmentDetails models.Appointment) *structs.IAppError {
+	if m.AddAppointmentFn != nil {
+		return m.AddAppointmentFn(ctx, appointmentDetails)
 	}
 	return nil
 }

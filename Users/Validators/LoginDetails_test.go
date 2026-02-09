@@ -7,7 +7,7 @@ import (
 
 func TestValidateLoginDetails(t *testing.T) {
 	loginDetails := structs.LoginDetails{
-		Email:    "Saqlain@gmaill.com",
+		Mobile:   9797798243,
 		Password: "Saqlain@123",
 	}
 
@@ -16,9 +16,9 @@ func TestValidateLoginDetails(t *testing.T) {
 		t.Errorf("Expected no validation errors as email and password are valid, but got: %v", errors)
 	}
 
-	//payload with invalid password but valid email
+	//payload with invalid password but valid mobile
 	invalidPasswordLoginDetailsPayload := structs.LoginDetails{
-		Email:    "Saqlain@gmail.com",
+		Mobile:   9797798243,
 		Password: "short",
 	}
 
@@ -32,9 +32,9 @@ func TestValidateLoginDetails(t *testing.T) {
 		t.Errorf("Expected password validation error field, but it was not found")
 	}
 
-	//payload with invalid email but valid password
+	//payload with invalid mobikle but valid password
 	invalidEmailLoginDetailsPayload := structs.LoginDetails{
-		Email:    "invalid-email",
+		Mobile:   979779,
 		Password: "Saqlain@gmail.com",
 	}
 

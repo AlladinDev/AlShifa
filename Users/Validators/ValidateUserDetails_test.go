@@ -3,19 +3,16 @@ package validators
 import (
 	models "AlShifa/Users/Models"
 	utils "AlShifa/Utils"
-	"fmt"
 	"testing"
 )
 
 func ReturnNewUserValidDetails() models.User {
 	return models.User{
-		Name:     "Saqlain",
-		Email:    "protonium789@gmail.com",
+		Name: "Saqlain",
+
 		Password: "Saqlain@123",
 		Mobile:   9797798243,
 		Address:  "Soura srinagar",
-		Pincode:  190011,
-		Age:      23,
 	}
 }
 func TestValidateUserDetails(t *testing.T) {
@@ -113,26 +110,6 @@ func TestValidateUserDetails(t *testing.T) {
 			expectedErrMessage: "password must contain upper, lower, digit and special character",
 		},
 
-		// ---------- EMAIL ----------
-		{
-			name:    "email_invalid",
-			useCase: "Invalid Email Format",
-			modifyUser: func(u *models.User) {
-				u.Email = "invalid-email"
-			},
-			expectedField:      "email",
-			expectedErrMessage: "invalid email format",
-		},
-		{
-			name:    "email_empty",
-			useCase: "Empty Email Validation",
-			modifyUser: func(u *models.User) {
-				u.Email = ""
-			},
-			expectedField:      "email",
-			expectedErrMessage: "email is required",
-		},
-
 		// ---------- MOBILE ----------
 		{
 			name:    "mobile_short",
@@ -161,38 +138,6 @@ func TestValidateUserDetails(t *testing.T) {
 			},
 			expectedField:      "mobile",
 			expectedErrMessage: "mobile number must be positive",
-		},
-
-		// ---------- PINCODE ----------
-		{
-			name:    "pincode_invalid",
-			useCase: "Invalid Pincode Length",
-			modifyUser: func(u *models.User) {
-				u.Pincode = 123
-			},
-			expectedField:      "pincode",
-			expectedErrMessage: "pincode must be 6 digits",
-		},
-
-		// ---------- AGE ----------
-		{
-			name:    "age_invalid_short",
-			useCase: "Invalid Age",
-			modifyUser: func(u *models.User) {
-				u.Age = 0
-			},
-			expectedField:      "age",
-			expectedErrMessage: fmt.Sprintf("age must be between  %d and %d", utils.MinAge, utils.MaxAge),
-		},
-		//max age validation
-		{
-			name:    "age_invalid_long",
-			useCase: "Max  Age Validation",
-			modifyUser: func(u *models.User) {
-				u.Age = utils.MaxAge + 1
-			},
-			expectedField:      "age",
-			expectedErrMessage: fmt.Sprintf("age must be between  %d and %d", utils.MinAge, utils.MaxAge),
 		},
 	}
 

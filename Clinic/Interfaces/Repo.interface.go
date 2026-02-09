@@ -20,4 +20,5 @@ type IRepository interface {
 	SearchDoctors(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, error)
 	SearchDoctor(ctx context.Context, filter bson.M) (models.Doctor, error)
 	AddDoctorToClinic(ctx mongo.SessionContext, clinicDetails models.AddDoctorToClinic) error
+	AddAppointment(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (*models.Appointment, error)
 }

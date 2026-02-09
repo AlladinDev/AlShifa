@@ -7,28 +7,26 @@ import (
 	"errors"
 	"reflect"
 	"testing"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var dummyTime = time.Now()
 var dummyObjectID = primitive.NewObjectID()
 
 func ReturnDummyUser() models.User {
 	return models.User{
-		Name:             "Saqlain",
-		Age:              23,
-		Password:         "Saqlain@123",
-		Email:            "Saqlain@gmail.com",
-		Address:          "Soura",
-		RegistrationDate: dummyTime,
-		ID:               dummyObjectID,
-		Role:             "user",
-		AppointmentIDS:   nil,
-		Appointments:     nil,
+		Name: "Saqlain",
+
+		Password: "Saqlain@123",
+
+		Address: "Soura",
+
+		ID:             dummyObjectID,
+		Role:           "user",
+		AppointmentIDS: nil,
+		Appointments:   nil,
 	}
 }
 

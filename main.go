@@ -6,6 +6,7 @@ import (
 	users "AlShifa/Users"
 	utils "AlShifa/Utils"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,14 +16,24 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func printMemUsage() {
+func printMemUsage() (string, error) {
 	var m runtime.MemStats
+
 	runtime.ReadMemStats(&m)
 
 	fmt.Printf("Alloc = %v MB\n", m.Alloc/1024/1024)
 	fmt.Printf("TotalAlloc = %v MB\n", m.TotalAlloc/1024/1024)
 	fmt.Printf("Sys = %v MB\n", m.Sys/1024/1024)
 	fmt.Printf("NumGC = %v\n", m.NumGC)
+
+	byteData, err := json.Marshal(&m)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(byteData), nil
+
 }
 
 func main() {
@@ -92,6 +103,16 @@ func main() {
 	users.InitialiseUserModule(&appStore)
 
 	fmt.Print("Server Started")
+
+	appStore.Server.HandleFunc("GET /cpu/usage", func(w http.ResponseWriter, r *http.Request) {
+		cpuStatistics, err := printMemUsage()
+		if err != nil {
+			_ = utils.WriteResponse(w, http.StatusInternalServerError, "Failed to get cpu usage")
+			return
+		}
+
+		_ = utils.WriteResponse(w, http.StatusOK, cpuStatistics)
+	})
 
 	if err := http.ListenAndServe(addr, appStore.Server); err != nil {
 		fmt.Print("Failed to start server on error is", err)
