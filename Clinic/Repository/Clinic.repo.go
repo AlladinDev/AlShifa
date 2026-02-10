@@ -182,7 +182,6 @@ func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Docto
 
 		bson.D{{Key: "$unwind", Value: bson.D{
 			{Key: "path", Value: "$clinics"},
-			{Key: "preserveNullAndEmptyArrays", Value: false},
 		}}},
 
 		bson.D{{Key: "$lookup", Value: bson.D{
@@ -194,7 +193,6 @@ func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Docto
 
 		bson.D{{Key: "$unwind", Value: bson.D{
 			{Key: "path", Value: "$clinics.information"},
-			{Key: "preserveNullAndEmptyArrays", Value: true},
 		}}},
 
 		// bson.D{{Key: "$addFields", Value: bson.D{
