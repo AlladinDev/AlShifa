@@ -10,7 +10,7 @@ type ClinicDetails struct {
 	StartTime   time.Time          `json:"startTiming" bson:"startTiming"`
 	EndTime     time.Time          `json:"endTime" bson:"endTime"`
 	Clinic      primitive.ObjectID `json:"clinic" bson:"clinic"`
-	Information []Clinic           `json:"information" bson:"-"`
+	Information *Clinic            `json:"information" bson:"information"`
 	WorkingDays []string           `json:"workingDays" bson:"workingDays"`
 }
 
