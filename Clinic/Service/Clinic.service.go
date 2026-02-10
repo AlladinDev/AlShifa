@@ -449,11 +449,23 @@ func (service *ClinicService) AddAppointment(ctx context.Context, appointmentDet
 	appointmentDetails.Status = "pending"
 	appointmentDetails.ID = primitive.NewObjectID()
 
-	//now call the repo method for storing this appointment
-	fmt.Print("limit", clinic.MaxAppointments)
 	appointmentCreated, appointmentErr := service.Repo.AddAppointment(ctx, clinic.MaxAppointments, appointmentDetails)
 	if appointmentErr != nil {
+		//here check for duplicate key error if yes then send error as MaxSlots booked
+		if mongo.IsDuplicateKeyError(appointmentErr) {
+			return nil, utils.ReturnAppError(errors.New("max Appointments Reached For Today"), http.StatusExpectationFailed, "Max Appointments Reached For today", "Max Appointments Reached For today")
+		}
 		return nil, utils.ReturnAppError(appointmentErr, http.StatusInternalServerError, "Failed to add appointment", appointmentErr.Error())
 	}
 	return appointmentCreated, nil
+}
+
+//AppointmentSlotsBooked function returns slots for whom maxAppointment has reached so all those slot documents where maxAppointment has reached are returned
+func (service *ClinicService) AppointmentSlotsBooked(ctx context.Context, slotDetais models.SlotDetails) ([]models.Slot, *structs.IAppError) {
+	slots, err := service.Repo.AppointmentSlotsBooked(ctx, slotDetais.MaxAppointments, slotDetais.ClinicID, slotDetais.DoctorID)
+	if err != nil {
+		return nil, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to Fetch Booked Slots", err.Error())
+	}
+
+	return slots, nil
 }

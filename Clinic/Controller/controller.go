@@ -118,26 +118,7 @@ func (controller *Controller) SearchClinic(res http.ResponseWriter, req *http.Re
 	// Initialize empty filter
 	filters := bson.M{}
 
-	// Iterate over query params
-	for key, values := range params {
-		if len(values) == 0 {
-			continue
-		}
-		value := values[0] // take first value for simplicity
-
-		// Special handling for clinicId
-		if key == "id" {
-			objID, err := primitive.ObjectIDFromHex(value)
-			if err != nil {
-				_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 400, "Unable To Fetch Clinic Details", "Server Error"))
-				return
-			}
-			filters["_id"] = objID
-		} else {
-			// Treat all other fields as string match
-			filters[key] = value
-		}
-	}
+	_ = utils.TransformParamIDS(params, filters)
 
 	// Call your service with filters
 	clinics, err := controller.Service.SearchClinic(ctx, filters)
@@ -146,7 +127,7 @@ func (controller *Controller) SearchClinic(res http.ResponseWriter, req *http.Re
 		return
 	}
 
-	utils.WriteResponse(res, http.StatusOK, utils.ReturnAppSuccess(200, "Fetched Successfully", clinics))
+	_ = utils.WriteResponse(res, http.StatusOK, utils.ReturnAppSuccess(200, "Fetched Successfully", clinics))
 }
 
 func (controller *Controller) SearchOwner(res http.ResponseWriter, req *http.Request) {
@@ -242,26 +223,7 @@ func (controller *Controller) SearchDoctor(res http.ResponseWriter, req *http.Re
 	// Initialize empty filter
 	filters := bson.M{}
 
-	// Iterate over query params
-	for key, values := range params {
-		if len(values) == 0 {
-			continue
-		}
-		value := values[0] // take first value for simplicity
-
-		// Special handling for clinicId
-		if key == "id" {
-			objID, err := primitive.ObjectIDFromHex(value)
-			if err != nil {
-				_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 400, "Unable To Fetch Doctors Details", "Server Error"))
-				return
-			}
-			filters["_id"] = objID
-		} else {
-			// Treat all other fields as string match
-			filters[key] = value
-		}
-	}
+	_ = utils.TransformParamIDS(params, filters)
 
 	doctors, err := controller.Service.SearchDoctor(ctx, filters)
 	if err != nil {
@@ -496,10 +458,35 @@ func (controller *Controller) AddAppointment(res http.ResponseWriter, req *http.
 	//now call the service layer method
 	appointment, err := controller.Service.AddAppointment(ctx, appointmentDetails)
 	if err != nil {
-		_ = utils.WriteResponse(res, http.StatusInternalServerError, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to add appointment", err.Error()))
+		_ = utils.WriteResponse(res, err.StatusCode, err)
 		return
 	}
 
 	_ = utils.WriteResponse(res, http.StatusCreated, utils.ReturnAppSuccess(http.StatusCreated, "Appointment Booked", appointment))
+
+}
+
+func (controller *Controller) AppointmentSlotsBooked(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+	var slotDetails models.SlotDetails
+	if err := json.NewDecoder(req.Body).Decode(&slotDetails); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(errors.New("invalid Json Details"), http.StatusBadRequest, "Invalid Json Details", "Invalid Json Details"))
+		return
+	}
+
+	validationErrors := validators.ValidateSlotDetails(&slotDetails)
+	if validationErrors != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, validationErrors)
+		return
+	}
+
+	slots, err := controller.Service.AppointmentSlotsBooked(ctx, slotDetails)
+	if err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusOK, utils.ReturnAppSuccess(http.StatusOK, "Successfully Fetched Slots booked", slots))
 
 }

@@ -21,6 +21,7 @@ type MockRepo struct {
 	SearchDoctorMockFn        func(ctx context.Context, filter bson.M) (models.Doctor, error)
 	AddDoctorToClinicMockFn   func(ctx context.Context, clinicDetails models.AddDoctorToClinic) error
 	AddAppointmentMockFn      func(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (*models.Appointment, error)
+	AppointmentSlotsBookedFn  func(ctx context.Context, maxAppointments int, clinicID primitive.ObjectID, doctorID primitive.ObjectID) ([]models.Slot, error)
 }
 
 var _ interfaces.IRepository = (*MockRepo)(nil)
@@ -86,4 +87,11 @@ func (m *MockRepo) AddAppointment(ctx context.Context, maxAppointments int, appo
 		log.Fatal("AddAppointmentMockFn not implemented in MockRepository of clinic service")
 	}
 	return m.AddAppointmentMockFn(ctx, maxAppointments, appointmentDetails)
+}
+
+func (m *MockRepo) AppointmentSlotsBooked(ctx context.Context, maxAppointments int, clinicID primitive.ObjectID, doctorID primitive.ObjectID) ([]models.Slot, error) {
+	if m.AppointmentSlotsBookedFn == nil {
+		log.Fatal("AppointmentSlotsBookedFn not implemented in MockRepository of clinic service")
+	}
+	return m.AppointmentSlotsBookedFn(ctx, maxAppointments, clinicID, doctorID)
 }

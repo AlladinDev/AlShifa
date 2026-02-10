@@ -21,7 +21,8 @@ type MockService struct {
 	SearchOwnerFn             func(ctx context.Context, filter bson.M) ([]models.Owner, *structs.IAppError)
 	RegisterDoctorFn          func(ctx context.Context, doctor models.Doctor) *structs.IAppError
 	VerifyAddDoctorToClinicFn func(ctx context.Context, otp string, doctorID primitive.ObjectID, clinicID primitive.ObjectID) *structs.IAppError
-	AddAppointmentFn          func(ctx context.Context, appointmentDetails models.Appointment) *structs.IAppError
+	AddAppointmentFn          func(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (*models.Appointment, *structs.IAppError)
+	AppointmentSlotsBookedFn  func(ctx context.Context, slotDetails models.SlotDetails) ([]models.Slot, *structs.IAppError)
 }
 
 // ---- Interface Methods ----
@@ -95,9 +96,16 @@ func (m *MockService) RegisterDoctor(ctx context.Context, doctor models.Doctor) 
 	return nil
 }
 
-func (m *MockService) AddAppointment(ctx context.Context, appointmentDetails models.Appointment) *structs.IAppError {
+func (m *MockService) AddAppointment(ctx context.Context, appointmentDetails models.Appointment) (*models.Appointment, *structs.IAppError) {
 	if m.AddAppointmentFn != nil {
-		return m.AddAppointmentFn(ctx, appointmentDetails)
+		return m.AddAppointmentFn(ctx, 1, appointmentDetails)
 	}
-	return nil
+	return nil, nil
+}
+
+func (m *MockService) AppointmentSlotsBooked(ctx context.Context, slotDetails models.SlotDetails) ([]models.Slot, *structs.IAppError) {
+	if m.AppointmentSlotsBookedFn != nil {
+		return m.AppointmentSlotsBookedFn(ctx, slotDetails)
+	}
+	return nil, nil
 }

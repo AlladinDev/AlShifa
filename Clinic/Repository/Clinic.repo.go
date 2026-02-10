@@ -359,3 +359,23 @@ func (r *Repo) AddAppointment(ctx context.Context, maxAppointments int, appointm
 	return &appointmentCreated, nil
 
 }
+
+func (r *Repo) AppointmentSlotsBooked(ctx context.Context, maxAppointments int, clinicID primitive.ObjectID, doctorID primitive.ObjectID) ([]models.Slot, error) {
+	findQuery := bson.M{
+		"clinicID":    clinicID,
+		"doctorID":    doctorID,
+		"slotsBooked": maxAppointments,
+	}
+	cur, err := r.DB.Collection("Slot").Find(ctx, findQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	defer cur.Close(ctx)
+	var slots []models.Slot
+	if err := cur.All(ctx, &slots); err != nil {
+		return nil, err
+	}
+
+	return slots, nil
+}

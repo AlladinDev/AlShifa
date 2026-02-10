@@ -43,6 +43,7 @@ func InitialiseClinicModule(app *internals.App) {
 	app.Server.HandleFunc(utils.MakeURL("POST", "/clinic/appointments/book"), middleware.JwtAuthMiddleware(controller.AddAppointment))
 	app.Server.HandleFunc(utils.MakeURL("POST", "/clinic/addDoctor/verify"), middleware.JwtAuthMiddleware(controller.VerifyAddDoctorToClinicOtp))
 	app.Server.HandleFunc(utils.MakeURL("POST", "/doctor/login"), controller.LoginDoctor)
+	app.Server.HandleFunc(utils.MakeURL("GET", "/clinic/appointments/full"), middleware.JwtAuthMiddleware(controller.AppointmentSlotsBooked))
 	app.Server.HandleFunc(utils.MakeURL("GET", "/healthcheck"), func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(w, "Hey buddy server is working for client module")
 	})

@@ -22,4 +22,5 @@ type IService interface {
 	RegisterDoctor(ctx context.Context, doctor models.Doctor) *structs.IAppError
 	VerifyAddDoctorToClinicOTP(ctx context.Context, otp string, doctorID primitive.ObjectID, clinicID primitive.ObjectID) *structs.IAppError
 	AddAppointment(ctx context.Context, appointmentDetails models.Appointment) (*models.Appointment, *structs.IAppError)
+	AppointmentSlotsBooked(ctx context.Context, slotDetails models.SlotDetails) ([]models.Slot, *structs.IAppError)
 }
