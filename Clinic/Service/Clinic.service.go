@@ -3,7 +3,6 @@ package service
 
 import (
 	interfaces "AlShifa/Clinic/Interfaces"
-	validators "AlShifa/Clinic/Validators"
 	"AlShifa/Clinic/models"
 	appInterfaces "AlShifa/Interfaces"
 	structs "AlShifa/Structs"
@@ -12,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -67,9 +65,6 @@ func (service *ClinicService) AddDoctorToClinic(ctx context.Context, clinicDetai
 		}
 	}
 
-	fmt.Print("reached here")
-	clinic := clinics[0]
-
 	//now check whether this doctorID exists or not
 	doctor, err := service.Repo.SearchDoctor(ctx, bson.M{"_id": clinicDetails.DoctorID})
 	if err != nil {
@@ -81,14 +76,15 @@ func (service *ClinicService) AddDoctorToClinic(ctx context.Context, clinicDetai
 		}
 	}
 
-	//now check whether doctor already has clinic or clinic has this doctor
-	doctorAlreadyAdded := slices.Contains(clinic.Doctors, doctor.ID)
-	if doctorAlreadyAdded {
-		return &structs.IAppError{
-			Message:    "Doctor Already Added To Clinic",
-			Reason:     errors.New("doctor is already added to clinic").Error(),
-			ErrorObj:   errors.New("doctor is already added to clinic"),
-			StatusCode: http.StatusForbidden,
+	//now here check if doctor has this clinicid in its clinics array throw error to prevent duplicates
+	for _, clinicData := range doctor.Clinics {
+		if clinicData.Clinic == clinicDetails.ClinicID {
+			return &structs.IAppError{
+				Message:    "This Doctor is already onboarded",
+				Reason:     "Doctor Already Onboarded",
+				ErrorObj:   errors.New("doctor Already Onboarded"),
+				StatusCode: http.StatusBadRequest,
+			}
 		}
 	}
 
@@ -108,6 +104,7 @@ func (service *ClinicService) AddDoctorToClinic(ctx context.Context, clinicDetai
 		},
 	}
 
+	fmt.Println("Otp is", otp)
 	//now save this otp payload in cache
 	if err := service.AddDoctorToClinicAuthCache.Set(ctx, otp, otpPayload, utils.CacheTTL); err != nil {
 		return &structs.IAppError{
@@ -176,32 +173,34 @@ func (service *ClinicService) VerifyAddDoctorToClinicOTP(ctx context.Context, ot
 		}
 	}
 
-	//now as everything is ok now using transaction add doctorID to clinic and also add clinicID to doctor data in database
-	session, err := service.MongoClient.StartSession()
+	//here first checks if this doctor is already onboarded it means its clinics array already contain this clinicid
+	doctor, err := service.Repo.SearchDoctor(ctx, bson.M{"clinics.clinic": clinicID})
 	if err != nil {
 		return &structs.IAppError{
-			Message:    "Failed to Verify Otp",
+			Message:    "Failed to Onboard Doctor",
 			ErrorObj:   err,
 			Reason:     err.Error(),
-			StatusCode: 500,
+			StatusCode: http.StatusInternalServerError,
 		}
 	}
-	defer session.EndSession(ctx)
 
-	//actual transaction function in which logic to add doctor to clinic resides
-	transactionFn := func(ctx mongo.SessionContext) (any, error) {
-		if err := service.Repo.AddDoctorToClinic(ctx, *otpPayload.ClinicDetails); err != nil {
-			return nil, err
+	//now loop over doctor.clinics and check if this clinicid already exists there
+	for _, cliniDetails := range doctor.Clinics {
+		if cliniDetails.Clinic == clinicID {
+			return &structs.IAppError{
+				Message:    "This Doctor Is Already Onboarded",
+				ErrorObj:   errors.New("duplicate Onboarding"),
+				Reason:     errors.New("duplicate Onboarding").Error(),
+				StatusCode: http.StatusForbidden,
+			}
 		}
-		return nil, nil
 	}
 
-	_, transactionErr := session.WithTransaction(ctx, transactionFn)
-	if transactionErr != nil {
+	if err := service.Repo.AddDoctorToClinic(ctx, *otpPayload.ClinicDetails); err != nil {
 		return &structs.IAppError{
-			Message:    "OTP verification Failed",
-			ErrorObj:   transactionErr,
-			Reason:     transactionErr.Error(),
+			Message:    "Failed to add doctor to clinic",
+			ErrorObj:   err,
+			Reason:     err.Error(),
 			StatusCode: 500,
 		}
 	}
@@ -215,32 +214,26 @@ func (service *ClinicService) VerifyAddDoctorToClinicOTP(ctx context.Context, ot
 
 }
 
-func (service *ClinicService) RegisterClinic(ctx context.Context, ownerID string, clinicDetails models.Clinic) *structs.IAppError {
-	//first convert ownerID to proper mongodb id
-	ownerMongoDBID, err := primitive.ObjectIDFromHex(string(ownerID))
-	if err != nil {
-		fmt.Print(err)
-		return utils.ReturnAppError(err, 500, "Unable TO Register CLinic", "Server Error")
-	}
+func (service *ClinicService) RegisterClinic(ctx context.Context, ownerID primitive.ObjectID, clinicDetails models.Clinic) *structs.IAppError {
 
 	//now first check if against this ownerId owner exists or not
-	_, ownerExistingErr := service.Repo.GetOwnerDetails(ctx, bson.M{"_id": ownerMongoDBID})
+	owners, ownerExistingErr := service.Repo.GetOwnerDetails(ctx, bson.M{"_id": ownerID})
 	if ownerExistingErr != nil {
 		return utils.ReturnAppError(ownerExistingErr, 500, "Failed to register clinic", "Server error")
 	}
 
-	//first do validation
-	validationErr := validators.ValidateClinicDetails(&clinicDetails)
-	if len(validationErr) != 0 {
-		return utils.ReturnAppError(validationErr, 400, "Registration failed", "Invalid Details")
+	//now here check if owner already has a clinic dont allow another one
+	owner := owners[0]
+	if owner.Clinic != primitive.NilObjectID {
+		return utils.ReturnAppError(errors.New("clinic Already Exists For This Owner"), http.StatusUnauthorized, "Clinic Already exists", "Clinic Already exists")
 	}
 
 	// set default values
 	clinicDetails.RegistrationDate = time.Now().UTC()
-	clinicDetails.Wallet = primitive.NilObjectID
+	clinicDetails.Wallet = nil
 	clinicDetails.ID = primitive.NewObjectID()
-	clinicDetails.Doctors = nil
-	registrationErr := service.Repo.RegisterClinic(ctx, ownerMongoDBID, clinicDetails)
+	clinicDetails.PlanType = utils.PlanPaid
+	registrationErr := service.Repo.RegisterClinic(ctx, ownerID, clinicDetails)
 	if registrationErr != nil {
 		fmt.Print(registrationErr)
 		return utils.ReturnAppError(registrationErr, 500, "Registration Failed", "Unknown reason")
@@ -321,6 +314,8 @@ func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.
 		},
 	})
 
+	fmt.Print(existingDoctors)
+
 	///if error is nill check if it is of other type  and return error
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -333,8 +328,7 @@ func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.
 	}
 
 	//here set the default values
-	doctor.Clinics = nil
-	doctor.Appointments = nil
+	doctor.Clinics = []models.ClinicDetails{}
 	doctor.RegistrationDate = time.Now()
 	doctor.ID = primitive.NewObjectID()
 	doctor.Role = utils.RoleDoctor
@@ -353,11 +347,7 @@ func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.
 }
 
 func (service *ClinicService) SearchDoctor(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, *structs.IAppError) {
-	// //here validate filters
-	// allowedFilters := []string{"_id", "name", "mobile", "email"}
-	// for keys := range filter {
 
-	// }
 	doctors, err := service.Repo.SearchDoctors(ctx, filter)
 	if err != nil {
 		return nil, &structs.IAppError{
@@ -426,6 +416,9 @@ func (service *ClinicService) AddAppointment(ctx context.Context, appointmentDet
 		return nil, utils.ReturnAppError(errors.New("no doctor exists with this id"), http.StatusInternalServerError, "Failed to add appoinment", "no doctor exists with this id")
 	}
 
+	//get the first doctor
+	doctor := doctors[0]
+
 	//now search for this clinic
 	clinics, err := service.SearchClinic(ctx, bson.M{"_id": appointmentDetails.Clinic})
 	if err != nil {
@@ -440,8 +433,17 @@ func (service *ClinicService) AddAppointment(ctx context.Context, appointmentDet
 	clinic := clinics[0]
 
 	//here check this doctor id must be present in the clinic.doctors array means it must be onboarded in this clinic
-	if !slices.Contains(clinic.Doctors, appointmentDetails.Doctor) {
-		return nil, utils.ReturnAppError(errors.New("this doctor is not onboarded in this clinic"), http.StatusInternalServerError, "Failed to add appoinment", "this doctor is not onboarded in this clinic")
+	var doctorExistsInThisClinic bool
+	for _, clinicObjects := range doctor.Clinics {
+		if clinicObjects.Clinic == appointmentDetails.Clinic {
+			doctorExistsInThisClinic = true
+			break
+		}
+	}
+
+	//if boolean is still false it means doctor is not onboarded to this clinic
+	if !doctorExistsInThisClinic {
+		return nil, utils.ReturnAppError(errors.New("this Doctor is Not onboarded yet"), http.StatusBadRequest, "Failed to add appoinment Doctor not onboarded to this clinic", "This Doctor is Not onboarded yet")
 	}
 
 	//now add some defaults like status date

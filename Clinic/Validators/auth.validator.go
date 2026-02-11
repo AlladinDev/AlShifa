@@ -125,6 +125,11 @@ func ValidateClinicDetails(clinic *models.Clinic) map[string]string {
 		return errors
 	}
 
+	//validate maxAppointments field
+	if clinic.MaxAppointments < 1 || clinic.MaxAppointments > 200 {
+		errors["maxAppointments"] = "Must be between 1 and 200"
+	}
+
 	// Name
 	name := strings.TrimSpace(clinic.Name)
 	if name == "" {

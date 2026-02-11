@@ -8,7 +8,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type MockRepo struct {
@@ -33,7 +32,7 @@ func (m *MockRepo) RegisterClinic(ctx context.Context, clinicID primitive.Object
 	return m.RegisterClinicMockFn(ctx, clinicID, clinic)
 }
 
-func (m *MockRepo) AddDoctorToClinic(ctx mongo.SessionContext, clinicDetails models.AddDoctorToClinic) error {
+func (m *MockRepo) AddDoctorToClinic(ctx context.Context, clinicDetails models.AddDoctorToClinic) error {
 	if m.AddDoctorToClinicMockFn == nil {
 		log.Fatal("AddDoctorToClinicMockFn not implemented in MockRepository of clinic service")
 	}

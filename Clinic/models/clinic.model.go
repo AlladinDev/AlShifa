@@ -15,18 +15,16 @@ type SeasonTimingDetails struct {
 
 // Clinic represents the details of a clinic, reordered for alignment.
 type Clinic struct {
-	ID               primitive.ObjectID    `json:"id" bson:"_id"`
-	Owner            primitive.ObjectID    `json:"owner" bson:"owner"`
-	RegistrationDate time.Time             `json:"registrationDate" bson:"registrationDate"`
-	Name             string                `json:"name" bson:"name"`                   // 16 bytes
-	Address          string                `json:"address" bson:"address"`             // 16 bytes
-	SeasonTimings    []SeasonTimingDetails `json:"seasonTimings" bson:"seasonTimings"` // 8 bytes (pointer)
-	Mobile           int64                 `json:"mobile" bson:"mobile"`               // 8 bytes (int64 for phone numbers)
-	Pincode          int32                 `json:"pincode" bson:"pincode"`             // 4 bytes
-	Doctors          []primitive.ObjectID  `json:"doctors" bson:"doctors"`
-	Wallet           primitive.ObjectID    `json:"wallet" bson:"wallet"`
+	ID               primitive.ObjectID    `json:"id,omitempty"  bson:"_id"`
+	RegistrationDate time.Time             `json:"registrationDate,omitempty"  bson:"registrationDate"`
+	Name             string                `json:"name,omitempty"  bson:"name"`                  // 16 bytes
+	Address          string                `json:"address,omitempty" bson:"address"`             // 16 bytes
+	SeasonTimings    []SeasonTimingDetails `json:"seasonTimings,omitempty" bson:"seasonTimings"` // 8 bytes (pointer)
+	Mobile           int64                 `json:"mobile,omitempty" bson:"mobile"`               // 8 bytes (int64 for phone numbers)
+	Pincode          int32                 `json:"pincode,omitempty" bson:"pincode"`             // 4 bytes
+	Wallet           *WalletDetails        `json:"wallet,omitempty" bson:"wallet"`
 	OwnerDetails     *Owner                `bson:"ownerDetails,omitempty"`
 	DoctorDetails    []Doctor              `bson:"doctorDetails,omitempty"`
-	PlanType         string                `json:"planType" bson:"planType"`
+	PlanType         string                `json:"planType,omitempty" bson:"planType"`
 	MaxAppointments  int                   `json:"maxAppointments" bson:"maxAppointments"`
 }

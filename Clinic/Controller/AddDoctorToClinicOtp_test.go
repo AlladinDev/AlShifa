@@ -46,9 +46,7 @@ func TestAddDoctorToClinicOTPHandler(t *testing.T) {
 			MockService: &MockService{
 				SearchClinicFn: func(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError) {
 					return []models.Clinic{
-						{ID: primitive.NewObjectID(),
-							Doctors: []primitive.ObjectID{},
-						},
+						{ID: primitive.NewObjectID()},
 					}, nil
 				},
 				AddDoctorToClinicFn: func(ctx context.Context, clinicDetails models.AddDoctorToClinic) *structs.IAppError {
@@ -81,9 +79,7 @@ func TestAddDoctorToClinicOTPHandler(t *testing.T) {
 			MockService: &MockService{
 				SearchClinicFn: func(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError) {
 					return []models.Clinic{
-						{ID: primitive.NewObjectID(),
-							Doctors: []primitive.ObjectID{},
-						},
+						{ID: primitive.NewObjectID()},
 					}, nil
 				},
 				AddDoctorToClinicFn: func(ctx context.Context, clinicDetails models.AddDoctorToClinic) *structs.IAppError {

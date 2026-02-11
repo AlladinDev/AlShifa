@@ -62,8 +62,6 @@ func (r *Repo) RegisterClinic(
 	ownerID primitive.ObjectID,
 	clinic models.Clinic,
 ) error {
-	//add ownerId  to clinic field
-	clinic.Owner = ownerID
 
 	session, err := r.DB.Client().StartSession()
 	if err != nil {
@@ -141,16 +139,41 @@ func (r *Repo) SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic
 		bson.D{{Key: "$match", Value: filter}},
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Doctor"},
-			{Key: "localField", Value: "doctors"},
-			{Key: "foreignField", Value: "_id"},
+			{Key: "localField", Value: "_id"},
+			{Key: "foreignField", Value: "clinics.clinic"},
 			{Key: "as", Value: "doctorDetails"},
 		}}},
+
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "Owner"},
+				{Key: "localField", Value: "_id"},
+				{Key: "foreignField", Value: "clinic"},
+				{Key: "as", Value: "ownerDetails"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$ownerDetails"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+
 		bson.D{
 			{Key: "$project", Value: bson.D{
-				{Key: "registrationDate", Value: 0},
-				{Key: "ownerDetails", Value: 0},
-				{Key: "wallet", Value: 0},
-				{Key: "owner", Value: 0},
+				{Key: "ownerDetails.password", Value: 0},
+				{Key: "doctorDetails.password", Value: 0},
+				{Key: "ownerDetails.gender", Value: 0},
+				{Key: "ownerDetails.email", Value: 0},
+				{Key: "ownerDetails.registrationDate", Value: 0},
+				{Key: "ownerDetails._id", Value: 0},
+				{Key: "ownerDetails.clinic", Value: 0},
+				{Key: "ownerDetails.role", Value: 0},
+				{Key: "doctorDetails.registrationDate", Value: 0},
+				{Key: "doctorDetails._id", Value: 0},
+				{Key: "doctorDetails.email", Value: 0},
+				{Key: "doctorDetails.clinics", Value: 0},
+				{Key: "doctorDetails.role", Value: 0},
 			}},
 		},
 	}
@@ -195,10 +218,6 @@ func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Docto
 			{Key: "path", Value: "$clinics.information"},
 		}}},
 
-		// bson.D{{Key: "$addFields", Value: bson.D{
-		// 	{Key: "clinics.information", Value: "$clinicInfo"},
-		// }}},
-
 		bson.D{{Key: "$group", Value: bson.D{
 			{Key: "_id", Value: "$_id"},
 			{Key: "name", Value: bson.D{{Key: "$first", Value: "$name"}}},
@@ -218,6 +237,7 @@ func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Docto
 	if err := cursor.All(ctx, &doctors); err != nil {
 		return nil, err
 	}
+	fmt.Print("doctors are", doctors)
 
 	return doctors, nil
 }
@@ -230,13 +250,7 @@ func (r *Repo) SearchDoctor(ctx context.Context, filter bson.M) (models.Doctor, 
 	return doctor, err
 }
 
-func (r *Repo) AddDoctorToClinic(ctx mongo.SessionContext, clinicDetails models.AddDoctorToClinic) error {
-	// Step 1: set empty array if null
-	r.DB.Collection("Doctor").UpdateOne(
-		ctx,
-		bson.M{"_id": clinicDetails.DoctorID, "clinics": nil},
-		bson.M{"$set": bson.M{"clinics": bson.A{}}},
-	)
+func (r *Repo) AddDoctorToClinic(ctx context.Context, clinicDetails models.AddDoctorToClinic) error {
 
 	doctorUpdationRes := r.DB.Collection("Doctor").FindOneAndUpdate(ctx, bson.M{"_id": clinicDetails.DoctorID}, bson.M{
 		"$push": bson.M{
@@ -250,22 +264,6 @@ func (r *Repo) AddDoctorToClinic(ctx mongo.SessionContext, clinicDetails models.
 	})
 
 	if doctorUpdationRes.Err() != nil {
-		return doctorUpdationRes.Err()
-	}
-	// Step 1: set empty array if null for doctors in clinic
-	r.DB.Collection("Clinic").UpdateOne(
-		ctx,
-		bson.M{"_id": clinicDetails.ClinicID, "doctors": nil},
-		bson.M{"$set": bson.M{"doctors": bson.A{}}},
-	)
-
-	clinicUpdationRes := r.DB.Collection("Clinic").FindOneAndUpdate(ctx, bson.M{"_id": clinicDetails.ClinicID}, bson.M{
-		"$push": bson.M{
-			"doctors": clinicDetails.DoctorID,
-		},
-	})
-
-	if clinicUpdationRes.Err() != nil {
 		return doctorUpdationRes.Err()
 	}
 

@@ -11,7 +11,7 @@ import (
 
 // MockService implements IService for testing purposes
 type MockService struct {
-	RegisterClinicFn          func(ctx context.Context, ownerID string, clinic models.Clinic) *structs.IAppError
+	RegisterClinicFn          func(ctx context.Context, ownerID primitive.ObjectID, clinic models.Clinic) *structs.IAppError
 	RegisterClinicOwnerFn     func(ctx context.Context, ownerDetails models.Owner) *structs.IAppError
 	SearchClinicFn            func(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError)
 	LoginClinicOwnerFn        func(ctx context.Context, email string, password string) (string, *structs.IAppError)
@@ -27,7 +27,7 @@ type MockService struct {
 
 // ---- Interface Methods ----
 
-func (m *MockService) RegisterClinic(ctx context.Context, ownerID string, clinic models.Clinic) *structs.IAppError {
+func (m *MockService) RegisterClinic(ctx context.Context, ownerID primitive.ObjectID, clinic models.Clinic) *structs.IAppError {
 	if m.RegisterClinicFn != nil {
 		return m.RegisterClinicFn(ctx, ownerID, clinic)
 	}

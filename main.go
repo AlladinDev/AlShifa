@@ -57,6 +57,8 @@ func main() {
 		log.Fatal("Failed to connect to mongodb", mongoErr)
 	}
 
+	defer internals.Disconnect(mongoClient)
+
 	//redis initialization
 	//get redis url
 	redisURL := os.Getenv("REDIS_URL")

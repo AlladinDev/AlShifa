@@ -18,6 +18,10 @@ const (
 	RoleDoctor      = "Doctor"
 	RoleClinicOwner = "ClinicOwner"
 
+	//Plans
+	PlanPaid = "Paid"
+	PlanFree = "Free"
+
 	// Name
 	MinNameLength = 2
 	MaxNameLength = 50

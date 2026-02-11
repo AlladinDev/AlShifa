@@ -3,6 +3,7 @@ package internals
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -30,4 +31,14 @@ func ConnectMongo(uri string) (*mongo.Client, error) {
 	}
 
 	return client, nil
+}
+
+func Disconnect(mongoClient *mongo.Client) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := mongoClient.Disconnect(ctx); err != nil {
+		fmt.Println("Failed to disconnect to mongodb", err)
+	}
+
+	fmt.Println("Disconnected from mongodb successfully")
 }

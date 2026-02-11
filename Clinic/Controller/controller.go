@@ -24,8 +24,8 @@ type Controller struct {
 }
 
 type ClinicRegistration struct {
-	OwnerID string        `json:"ownerId"`
-	Clinic  models.Clinic `json:"clinicDetails"`
+	OwnerID primitive.ObjectID `json:"ownerId"`
+	Clinic  models.Clinic      `json:"clinicDetails"`
 }
 
 func NewController(svr interfaces.IService, validateAddDoctorToClinicFn func(details *models.AddDoctorToClinic) map[string]string) *Controller {
@@ -36,17 +36,13 @@ func NewController(svr interfaces.IService, validateAddDoctorToClinicFn func(det
 }
 
 func (controller *Controller) RegisterClinic(res http.ResponseWriter, req *http.Request) {
-	if req.Method != "POST" {
-		_ = utils.InvalidMethodResponse("POST", res)
-		return
-	}
 
 	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
 	defer cancel()
 
 	var clinicRegistrationDetails ClinicRegistration
 	if err := json.NewDecoder(req.Body).Decode(&clinicRegistrationDetails); err != nil {
-		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 500, "Invalid Details Provided", "Json Error"))
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, http.StatusBadRequest, "Invalid Details Provided", "Json Error"))
 		return
 	}
 
@@ -58,9 +54,34 @@ func (controller *Controller) RegisterClinic(res http.ResponseWriter, req *http.
 		return
 	}
 
+	//here extract the ownerId from req.context fed by jwt middleware
+	ownerID := req.Context().Value(middleware.ContextUserIDKey)
+
+	//try to convert it into string
+	ownerIDStr, ok := ownerID.(string)
+	if !ok {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(errors.New("invalid ownerid"), 400, "Invalid OwnerId String Failed to register clinic", "Invalid ownerid"))
+		return
+	}
+
+	if len(ownerIDStr) == 0 {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(errors.New("owner Id missing"), 400, "Ownerid is missing", "Missing OwnerId"))
+		return
+	}
+
+	//now try to convert this ownerIDStr into mongodbID
+	ownerMongoDBID, err := primitive.ObjectIDFromHex(ownerIDStr)
+	if err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(errors.New("invalid ownerid"), 400, "Invalid OwnerId Failed to register clinic", "Invalid ownerid"))
+		return
+	}
+
+	//here add this id to clinicregistration details so that user can send any other owners id
+	clinicRegistrationDetails.OwnerID = ownerMongoDBID
+
 	registrationErr := controller.Service.RegisterClinic(ctx, clinicRegistrationDetails.OwnerID, clinicRegistrationDetails.Clinic)
 	if registrationErr != nil {
-		_ = utils.WriteResponse(res, http.StatusInternalServerError, registrationErr)
+		_ = utils.WriteResponse(res, registrationErr.StatusCode, registrationErr)
 		return
 	}
 
@@ -310,28 +331,28 @@ func (controller *Controller) AddDoctorToClinic(res http.ResponseWriter, req *ht
 	//now extract clinicdetails from req.payload
 	var clinicDetails models.AddDoctorToClinic
 	if err := json.NewDecoder(req.Body).Decode(&clinicDetails); err != nil {
-		_ = utils.WriteResponse(res, http.StatusBadRequest, err)
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, http.StatusBadRequest, "InValid JsonDetails", "Invalid Json Details"))
 		return
 	}
 
 	//now validate details first
 	validationErrors := controller.ValidateAddDoctorToClinicDetailsFn(&clinicDetails)
 	if validationErrors != nil {
-		_ = utils.WriteResponse(res, http.StatusBadRequest, validationErrors)
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(validationErrors, http.StatusBadRequest, "Invalid Details", "validation Failed"))
 		return
 	}
 
 	//now using ownerMongoDbID find its associated clinic
-	clinics, searchClinicErr := controller.Service.SearchClinic(ctx, bson.M{"owner": ownerMongoDBID})
+	owners, searchClinicErr := controller.Service.SearchOwner(ctx, bson.M{"_id": ownerMongoDBID})
 	if searchClinicErr != nil {
 		_ = utils.WriteResponse(res, searchClinicErr.StatusCode, searchClinicErr)
 		return
 	}
 
-	if len(clinics) == 0 {
+	if len(owners) == 0 {
 		_ = utils.WriteResponse(res, http.StatusNotFound, &structs.IAppError{
-			Message:    "No Clinic Found",
-			Reason:     "No Clinic Found For this Owner",
+			Message:    "No Owner Found",
+			Reason:     "No Owner Found For this OwnerID",
 			StatusCode: http.StatusNotFound,
 			ErrorObj:   nil,
 		})
@@ -339,9 +360,9 @@ func (controller *Controller) AddDoctorToClinic(res http.ResponseWriter, req *ht
 	}
 
 	//add id to clinicDetails and dont trust frontend for sending it
-	clinicDetails.ClinicID = clinics[0].ID
+	clinicDetails.ClinicID = owners[0].Clinic
 
-	//now as we have clinic also now fit details such as clinicid in clinic details and pass this info to serviced layer
+	//now as we have clinic also now fit details such as clinicid in clinic details and pass this info to service layer
 	if err := controller.Service.AddDoctorToClinic(ctx, clinicDetails); err != nil {
 		_ = utils.WriteResponse(res, err.StatusCode, err)
 		return
@@ -364,11 +385,11 @@ func (controller *Controller) VerifyAddDoctorToClinicOtp(res http.ResponseWriter
 	}
 
 	if err := json.NewDecoder(req.Body).Decode(&otpPayload); err != nil {
-		_ = utils.WriteResponse(res, http.StatusBadRequest, err)
+		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, http.StatusBadRequest, "Invalid Json Details", "Invalid details"))
 		return
 	}
 
-	//now try to extract clinicid from context
+	//now try to extract ownerid from context
 	ownerID := req.Context().Value(middleware.ContextUserIDKey)
 	if ownerID == "" {
 		_ = utils.WriteResponse(res, http.StatusBadRequest, errors.New("missing clinicid"))
@@ -408,25 +429,25 @@ func (controller *Controller) VerifyAddDoctorToClinicOtp(res http.ResponseWriter
 	}
 
 	//now fetch the clinic using ownerID
-	clinics, clinicSearchErr := controller.Service.SearchClinic(ctx, bson.M{"owner": ownerIDMongoDBID})
-	if clinicSearchErr != nil {
-		_ = utils.WriteResponse(res, clinicSearchErr.StatusCode, err)
+	owners, ownerSearchErr := controller.Service.SearchOwner(ctx, bson.M{"_id": ownerIDMongoDBID})
+	if ownerSearchErr != nil {
+		_ = utils.WriteResponse(res, ownerSearchErr.StatusCode, err)
 		return
 	}
 
-	if len(clinics) == 0 {
+	if len(owners) == 0 {
 		_ = utils.WriteResponse(res, http.StatusNotFound, &structs.IAppError{
-			Message:    "No Clinic Found",
-			ErrorObj:   errors.New("no clinic found"),
-			Reason:     errors.New("no clinic found").Error(),
+			Message:    "No Owner Found",
+			ErrorObj:   errors.New("no Owner found"),
+			Reason:     errors.New("no Owner found").Error(),
 			StatusCode: http.StatusNotFound,
 		})
 		return
 	}
-	clinic := clinics[0]
+	clinicID := owners[0].Clinic
 
 	//now pass these details to service layer
-	if err := controller.Service.VerifyAddDoctorToClinicOTP(ctx, otpPayload.OTP, doctorMongoDBID, clinic.ID); err != nil {
+	if err := controller.Service.VerifyAddDoctorToClinicOTP(ctx, otpPayload.OTP, doctorMongoDBID, clinicID); err != nil {
 		_ = utils.WriteResponse(res, err.StatusCode, err)
 		return
 	}

@@ -56,8 +56,7 @@ func TestAddDoctorToClinicOTPGenerationFn(t *testing.T) {
 				SearchClinicMockFn: func(ctx context.Context, filter bson.M) ([]models.Clinic, error) {
 					return []models.Clinic{
 						{
-							ID:      ReturnNewObjectID("AlMedrid clinic"),
-							Doctors: []primitive.ObjectID{},
+							ID: ReturnNewObjectID("AlMedrid clinic"),
 						},
 					}, nil
 				},
@@ -112,9 +111,6 @@ func TestAddDoctorToClinicOTPGenerationFn(t *testing.T) {
 					return []models.Clinic{
 						{
 							ID: ReturnNewObjectID("Alchem clinic"),
-							Doctors: []primitive.ObjectID{
-								ReturnNewObjectID("Dr Imran_AlreadyOnboarded"),
-							},
 						},
 					}, nil
 				},
