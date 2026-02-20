@@ -538,3 +538,7 @@ func (controller *Controller) FetchDoctorWithItsclinics(res http.ResponseWriter,
 	})
 
 }
+
+func (controller *Controller) FetchClinicAppointments(res http.ResponseWriter, req *http.Request) {
+
+}

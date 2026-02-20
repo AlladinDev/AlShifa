@@ -170,6 +170,9 @@ func (controller *UserController) FetchAppointments(res http.ResponseWriter, req
 	//add the userid in filter
 	filter["user"] = userMongoDBID
 	utils.TransformParamIDS(params, filter)
+	for key, value := range filter {
+		fmt.Println(key, value)
+	}
 
 	appointments, err := controller.Service.FetchAppointments(ctx, "user", filter)
 	if err != nil {
