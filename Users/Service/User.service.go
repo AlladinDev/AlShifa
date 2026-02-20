@@ -2,10 +2,11 @@
 package service
 
 import (
-	structs "AlShifa/Structs"
-	interfaces "AlShifa/Users/Interfaces"
-	models "AlShifa/Users/Models"
-	utils "AlShifa/Utils"
+	sharedModels "AlShifa/models"
+	structs "AlShifa/structs"
+	interfaces "AlShifa/users/interfaces"
+	models "AlShifa/users/models"
+	utils "AlShifa/utils"
 	"context"
 	"errors"
 	"fmt"
@@ -17,14 +18,16 @@ import (
 )
 
 type Service struct {
-	repo interfaces.IRepository
+	repo               interfaces.IRepository
+	userClinicContract interfaces.IUserClinicContract
 }
 
 var _ interfaces.IService = (*Service)(nil)
 
-func ReturnNewService(repo interfaces.IRepository) *Service {
+func ReturnNewService(repo interfaces.IRepository, userclinicContract interfaces.IUserClinicContract) *Service {
 	return &Service{
-		repo: repo,
+		repo:               repo,
+		userClinicContract: userclinicContract,
 	}
 }
 
@@ -55,7 +58,6 @@ func (s *Service) AddUser(ctx context.Context, user models.User) *structs.IAppEr
 
 	//add default things like userId and registrationDate and null values like appointments
 	user.ID = primitive.NewObjectID()
-	user.AppointmentIDS = nil
 	user.Appointments = nil
 	user.Role = utils.RoleUser
 
@@ -81,6 +83,10 @@ func (s *Service) AddUser(ctx context.Context, user models.User) *structs.IAppEr
 	}
 
 	return nil
+}
+
+func (s *Service) FetchAppointments(ctx context.Context, groupBy string, filter bson.M) ([]sharedModels.Appointments, *structs.IAppError) {
+	return s.userClinicContract.FetchAppointments(ctx, groupBy, filter)
 }
 
 func (s *Service) SearchUserByID(ctx context.Context, userID primitive.ObjectID) (*models.User, *structs.IAppError) {
@@ -123,8 +129,8 @@ func (s *Service) SearchUser(ctx context.Context, filter bson.M) (*models.User, 
 	return user, nil
 }
 
-func (s *Service) LoginUser(ctx context.Context, mobile int, password string) (string, *structs.IAppError) {
-	user, err := s.repo.SearchUser(ctx, bson.M{"mobile": mobile})
+func (s *Service) LoginUser(ctx context.Context, email string, password string) (string, *structs.IAppError) {
+	user, err := s.repo.SearchUser(ctx, bson.M{"email": email})
 	if err != nil {
 		fmt.Print(err)
 		if err == mongo.ErrNoDocuments {

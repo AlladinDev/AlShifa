@@ -2,20 +2,39 @@
 package users
 
 import (
-	internals "AlShifa/Internals"
-	middleware "AlShifa/Middleware"
-	controller "AlShifa/Users/Controller"
-	repository "AlShifa/Users/Repository"
-	service "AlShifa/Users/Service"
-	utils "AlShifa/Utils"
+	constants "AlShifa/constants"
+	internals "AlShifa/internals"
+	middleware "AlShifa/middleware"
+	controller "AlShifa/users/Controller"
+	repository "AlShifa/users/Repository"
+	service "AlShifa/users/Service"
+	interfaces "AlShifa/users/interfaces"
+	utils "AlShifa/utils"
 )
 
 func InitialiseUserModule(app *internals.App) {
 	repository := repository.ReturnNewRepository(app.DB)
-	service := service.ReturnNewService(repository)
-	controller := controller.ReturnNewController(service)
-	app.Server.HandleFunc(utils.MakeURL("POST", "/user/register"), controller.RegisterUser)
-	app.Server.HandleFunc(utils.MakeURL("POST", "/user/login"), controller.LoginUser)
 
-	app.Server.HandleFunc(utils.MakeURL("GET", "/user/details"), middleware.JwtAuthMiddleware(middleware.RoleGuardMiddleware(controller.SearchUser, utils.RoleUser)))
+	//here from dependency injection get the clinicService if not found panic
+	clinicServiceAny, _ := app.DI.GetService(constants.NameClinicService)
+
+	if clinicServiceAny == nil {
+		panic("ClinicService required in usermodule not found in di")
+	}
+
+	clinicService, ok := clinicServiceAny.(interfaces.IUserClinicContract)
+	if !ok {
+		panic("interface clinicservice conversion failed in user module")
+	}
+
+	service := service.ReturnNewService(repository, clinicService)
+
+	router := app.Server
+
+	controller := controller.ReturnNewController(service)
+	router.HandleFunc(utils.MakeURL("POST", "/user/register"), controller.RegisterUser)
+	router.HandleFunc(utils.MakeURL("POST", "/user/login"), controller.LoginUser)
+	router.HandleFunc(utils.MakeURL("GET", "/user/appointments"), middleware.JwtAuthmiddleware(middleware.RoleGuardmiddleware(controller.FetchAppointments, utils.RoleUser)))
+
+	app.Server.HandleFunc(utils.MakeURL("GET", "/user/details"), middleware.JwtAuthmiddleware(middleware.RoleGuardmiddleware(controller.SearchUser, utils.RoleUser)))
 }

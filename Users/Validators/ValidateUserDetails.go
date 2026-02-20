@@ -1,8 +1,8 @@
 package validators
 
 import (
-	models "AlShifa/Users/Models"
-	utils "AlShifa/Utils"
+	utils "AlShifa/utils"
+	models "AlShifa/users/models"
 	"fmt"
 	"strings"
 	"unicode"

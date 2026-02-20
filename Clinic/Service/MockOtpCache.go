@@ -1,7 +1,7 @@
 package service
 
 import (
-	"AlShifa/Clinic/models"
+	"AlShifa/clinic/models"
 	"context"
 	"time"
 )

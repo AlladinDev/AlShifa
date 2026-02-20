@@ -2,8 +2,8 @@
 package validators
 
 import (
-	"AlShifa/Clinic/models"
-	utils "AlShifa/Utils"
+	"AlShifa/clinic/models"
+	utils "AlShifa/utils"
 	"regexp"
 	"strings"
 	"unicode"
@@ -117,7 +117,7 @@ func lenInt64Digits(n int64) int {
 	return count
 }
 
-func ValidateClinicDetails(clinic *models.Clinic) map[string]string {
+func ValidateclinicDetails(clinic *models.Clinic) map[string]string {
 	errors := make(map[string]string)
 
 	if clinic == nil {

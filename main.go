@@ -1,10 +1,11 @@
 package main
 
 import (
-	clinic "AlShifa/Clinic"
-	internals "AlShifa/Internals"
-	users "AlShifa/Users"
-	utils "AlShifa/Utils"
+	clinic "AlShifa/clinic"
+	internals "AlShifa/internals"
+	middleware "AlShifa/middleware"
+	users "AlShifa/users"
+	utils "AlShifa/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -94,17 +95,20 @@ func main() {
 	fmt.Println("REDIS Connected successfully")
 	///----------------------redis initialization end
 
-	appStore := internals.App{
-		DB:     mongoClient.Database("AlShifa"),
-		Server: http.NewServeMux(),
-		Redis:  &redisInstance,
-	}
+	appStore := internals.NewApp().
+		WithDB(mongoClient.Database("AlShifa")).
+		WithDI().
+		WithRedis(&redisInstance).
+		WithServer(http.NewServeMux())
+
+	//add central middlewares
 
 	//initialise modules
-	clinic.InitialiseClinicModule(&appStore)
-	users.InitialiseUserModule(&appStore)
+	clinic.InitialiseclinicModule(appStore)
 
-	fmt.Print("Server Started")
+	users.InitialiseUserModule(appStore)
+
+	fmt.Println("Server Started with dependency injection system initialized")
 
 	appStore.Server.HandleFunc("GET /cpu/usage", func(w http.ResponseWriter, r *http.Request) {
 		cpuStatistics, err := printMemUsage()
@@ -116,7 +120,13 @@ func main() {
 		_ = utils.WriteResponse(w, http.StatusOK, cpuStatistics)
 	})
 
-	if err := http.ListenAndServe(addr, appStore.Server); err != nil {
+	//add global middlewares here
+	guardedMux := middleware.Corsmiddleware(appStore.Server)
+
+	//print services registered in di for debugging
+	appStore.DI.PrintServicesInDI()
+
+	if err := http.ListenAndServe(addr, guardedMux); err != nil {
 		fmt.Print("Failed to start server on error is", err)
 	}
 

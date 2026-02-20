@@ -1,14 +1,14 @@
 package middleware
 
 import (
-	utils "AlShifa/Utils"
+	utils "AlShifa/utils"
 	"net/http"
 	"slices"
 )
 
-func RoleGuardMiddleware(handler http.HandlerFunc, allowedRoles ...string) http.HandlerFunc {
+func RoleGuardmiddleware(handler http.HandlerFunc, allowedRoles ...string) http.HandlerFunc {
 	if len(allowedRoles) == 0 {
-		panic("At least one role must be specified for RoleGuardMiddleware")
+		panic("At least one role must be specified for RoleGuardmiddleware")
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

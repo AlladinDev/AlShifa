@@ -1,8 +1,8 @@
 package service
 
 import (
-	structs "AlShifa/Structs"
-	models "AlShifa/Users/Models"
+	structs "AlShifa/structs"
+	models "AlShifa/users/models"
 	"context"
 	"errors"
 	"reflect"
@@ -22,6 +22,7 @@ func ReturnDummyUser() models.User {
 		Password: "Saqlain@123",
 
 		Address: "Soura",
+		Email:"Saqlain@gmail.com"
 
 		ID:             dummyObjectID,
 		Role:           "user",

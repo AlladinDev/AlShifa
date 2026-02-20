@@ -9,14 +9,14 @@ const (
 
 	//otp expiry time
 	OTPExpiry               = 5 * time.Minute
-	DoctorAddToClinicOTPKey = "DoctorAddToClinicOTPKey"
+	DoctorAddToclinicOTPKey = "DoctorAddToclinicOTPKey"
 	CacheTTL                = OTPExpiry
 
 	//Roles
 	RoleUser        = "User"
 	RoleAdmin       = "Admin"
 	RoleDoctor      = "Doctor"
-	RoleClinicOwner = "ClinicOwner"
+	RoleclinicOwner = "clinicOwner"
 
 	//Plans
 	PlanPaid = "Paid"

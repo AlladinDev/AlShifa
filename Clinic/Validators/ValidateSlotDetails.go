@@ -1,7 +1,7 @@
 package validators
 
 import (
-	"AlShifa/Clinic/models"
+	"AlShifa/clinic/models"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -9,7 +9,7 @@ import (
 func ValidateSlotDetails(input *models.SlotDetails) map[string]string {
 	errors := make(map[string]string)
 
-	// Validate ClinicID
+	// Validate clinicID
 	clinicID, err := primitive.ObjectIDFromHex(input.ClinicID.Hex())
 	if err != nil {
 		errors["clinicID"] = "invalid clinic id"

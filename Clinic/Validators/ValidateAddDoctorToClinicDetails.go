@@ -1,12 +1,12 @@
 package validators
 
 import (
-	"AlShifa/Clinic/models"
+	"AlShifa/clinic/models"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func ValidateAddDoctorToClinicDetails(details *models.AddDoctorToClinic) map[string]string {
+func ValidateAddDoctorToclinicDetails(details *models.AddDoctorToclinic) map[string]string {
 	validationErrors := make(map[string]string)
 	if details == nil {
 		validationErrors["details"] = "missing clinic details"

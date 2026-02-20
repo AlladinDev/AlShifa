@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type ClinicDetails struct {
+type clinicDetails struct {
 	StartTime   time.Time          `json:"startTiming,omitempty" bson:"startTiming"`
 	EndTime     time.Time          `json:"endTime,omitempty" bson:"endTime"`
 	Clinic      primitive.ObjectID `json:"clinic,omitempty" bson:"clinic"`
@@ -25,7 +25,7 @@ type Doctor struct {
 	WorkingAt        string             `json:"workingAt,omitempty" bson:"workingAt"`
 	Mobile           int64              `json:"mobile,omitempty" bson:"mobile"`
 	//clinics is for injecting clinicdetails into it during mongodb pipeline
-	Clinics []ClinicDetails `json:"clinics,omitempty" bson:"clinics"`
+	Clinics []clinicDetails `json:"clinics,omitempty" bson:"clinics"`
 	Role    string          `json:"role,omitempty" bson:"role"`
 }
 
@@ -35,5 +35,5 @@ type DoctorPublicDetails struct {
 	Name           string             `json:"name,omitempty" bson:"name"`
 	Qualifications string             `json:"qualifications,omitempty" bson:"qualifications"`
 	WorkingAt      string             `json:"workingAt,omitempty" bson:"workingAt"`
-	Clinics        []ClinicDetails    `json:"clinics,omitempty" bson:"clinics"`
+	Clinics        []clinicDetails    `json:"clinics,omitempty" bson:"clinics"`
 }

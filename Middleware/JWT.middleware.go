@@ -2,9 +2,10 @@
 package middleware
 
 import (
-	structs "AlShifa/Structs"
-	utils "AlShifa/Utils"
+	structs "AlShifa/structs"
+	utils "AlShifa/utils"
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -18,7 +19,7 @@ const (
 	ContextUserRoleKey contextKey = "role"
 )
 
-func JwtAuthMiddleware(handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func JwtAuthmiddleware(handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		panic("JWT_SECRET environment variable is not set")
@@ -58,6 +59,7 @@ func JwtAuthMiddleware(handler func(http.ResponseWriter, *http.Request)) func(ht
 		}
 
 		// ---- Inject values into context ----
+		fmt.Println("userid found it is", claims.UserID)
 		ctx := context.WithValue(r.Context(), ContextUserIDKey, claims.UserID)
 		ctx = context.WithValue(ctx, ContextUserRoleKey, claims.Role)
 

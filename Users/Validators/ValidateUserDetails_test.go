@@ -1,8 +1,8 @@
 package validators
 
 import (
-	models "AlShifa/Users/Models"
-	utils "AlShifa/Utils"
+	models "AlShifa/users/models"
+	utils "AlShifa/utils"
 	"testing"
 )
 

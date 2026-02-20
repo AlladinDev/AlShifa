@@ -16,7 +16,8 @@ type Appointment struct {
 	PatientAddress string `json:"patientAddress" bson:"patientAddress"`
 	Status         string `json:"status" bson:"status"`
 	DoctorName     string `json:"doctorName" bson:"doctorName"`
-	ClinicName     string `json:"clinicName" bson:"doctorName"`
+	ClinicName     string `json:"clinicName" bson:"clinicName"`
+	UserName       string `json:"userName" bson:"userName"`
 
 	// 12 bytes each
 	ID     primitive.ObjectID `json:"id" bson:"_id"`
@@ -29,4 +30,9 @@ type Appointment struct {
 
 	// 1 byte (placed last to avoid padding waste)
 	Slot int `json:"slot" bson:"slot"`
+}
+
+type Appointments struct {
+	TotalAppointments int           `json:"totalAppointments" bson:"totalAppointments"`
+	Appointment       []Appointment `json:"appointments" bson:"appointments"`
 }

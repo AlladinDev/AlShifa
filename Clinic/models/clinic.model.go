@@ -13,7 +13,7 @@ type SeasonTimingDetails struct {
 	Name  string    `json:"name" bson:"name"`   // 16 bytes
 }
 
-// Clinic represents the details of a clinic, reordered for alignment.
+// clinic represents the details of a clinic, reordered for alignment.
 type Clinic struct {
 	ID               primitive.ObjectID    `json:"id,omitempty"  bson:"_id"`
 	RegistrationDate time.Time             `json:"registrationDate,omitempty"  bson:"registrationDate"`
@@ -24,7 +24,7 @@ type Clinic struct {
 	Pincode          int32                 `json:"pincode,omitempty" bson:"pincode"`             // 4 bytes
 	Wallet           *WalletDetails        `json:"wallet,omitempty" bson:"wallet"`
 	OwnerDetails     *Owner                `bson:"ownerDetails,omitempty"`
-	DoctorDetails    []Doctor              `bson:"doctorDetails,omitempty"`
 	PlanType         string                `json:"planType,omitempty" bson:"planType"`
 	MaxAppointments  int                   `json:"maxAppointments" bson:"maxAppointments"`
+	Verified         bool                  `json:"verified" bson:"verified"`
 }

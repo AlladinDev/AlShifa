@@ -1,9 +1,9 @@
 package service
 
 import (
-	"AlShifa/Clinic/models"
 	appInterfaces "AlShifa/Interfaces"
-	structs "AlShifa/Structs"
+	"AlShifa/clinic/models"
+	structs "AlShifa/structs"
 	"context"
 	"errors"
 	"net/http"
@@ -29,7 +29,7 @@ func ResetMOngoDBCacheKeys() {
 	mongoDBCacheKeys = map[string]primitive.ObjectID{}
 }
 
-func TestAddDoctorToClinicOTPGenerationFn(t *testing.T) {
+func TestAddDoctorToclinicOTPGenerationFn(t *testing.T) {
 
 	testCases := []struct {
 		Name            string
@@ -37,7 +37,7 @@ func TestAddDoctorToClinicOTPGenerationFn(t *testing.T) {
 		Notifier        appInterfaces.INotifier[string, string]
 		mockRepoFn      *MockRepo
 		shouldReturnErr bool
-		clinicDetails   models.AddDoctorToClinic
+		clinicDetails   models.AddDoctorToclinic
 		expectedErr     *structs.IAppError
 		OTPCache        appInterfaces.ICache[string, models.AddDoctorOtpPayload]
 	}{
@@ -47,14 +47,14 @@ func TestAddDoctorToClinicOTPGenerationFn(t *testing.T) {
 			OtpGenerator:    func(uniquePrefix string) string { return "OTP" },
 			Notifier:        ReturnNewEmailNotifier(),
 			shouldReturnErr: false,
-			clinicDetails: models.AddDoctorToClinic{
+			clinicDetails: models.AddDoctorToclinic{
 				DoctorID: ReturnNewObjectID("Dr Saqlain"),
 				ClinicID: ReturnNewObjectID("AlMedrid clinic"),
 			},
 			expectedErr: nil,
 			mockRepoFn: &MockRepo{
-				SearchClinicMockFn: func(ctx context.Context, filter bson.M) ([]models.Clinic, error) {
-					return []models.Clinic{
+				SearchclinicMockFn: func(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
+					return []models.ClinicDoctor{
 						{
 							ID: ReturnNewObjectID("AlMedrid clinic"),
 						},
@@ -69,17 +69,17 @@ func TestAddDoctorToClinicOTPGenerationFn(t *testing.T) {
 			OTPCache: ReturnNewCache(),
 		},
 
-		//test case when otp generation fails because of error from searchClinicMockFn
+		//test case when otp generation fails because of error from searchclinicMockFn
 		{Name: "Otp generation fn failed   to search doctor",
 			OtpGenerator:    func(uniquePrefix string) string { return "OTP" },
 			Notifier:        ReturnNewEmailNotifier(),
 			shouldReturnErr: true,
-			clinicDetails: models.AddDoctorToClinic{
+			clinicDetails: models.AddDoctorToclinic{
 				DoctorID: ReturnNewObjectID("Dr Rouf"),
 				ClinicID: ReturnNewObjectID("AlMedrid clinic"),
 			},
 			mockRepoFn: &MockRepo{
-				SearchClinicMockFn: func(ctx context.Context, filter bson.M) ([]models.Clinic, error) {
+				SearchclinicMockFn: func(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
 					return nil, mongo.ErrNoDocuments
 				},
 				SearchDoctorMockFn: func(ctx context.Context, filter bson.M) (models.Doctor, error) {
@@ -89,7 +89,7 @@ func TestAddDoctorToClinicOTPGenerationFn(t *testing.T) {
 				},
 			},
 			expectedErr: &structs.IAppError{
-				Message:    "Failed to Add Doctor To Clinic",
+				Message:    "Failed to Add Doctor To clinic",
 				Reason:     mongo.ErrNoDocuments.Error(),
 				ErrorObj:   mongo.ErrNoDocuments,
 				StatusCode: http.StatusInternalServerError,
@@ -102,13 +102,13 @@ func TestAddDoctorToClinicOTPGenerationFn(t *testing.T) {
 			OtpGenerator:    func(uniquePrefix string) string { return "OTP" },
 			Notifier:        ReturnNewEmailNotifier(),
 			shouldReturnErr: true,
-			clinicDetails: models.AddDoctorToClinic{
+			clinicDetails: models.AddDoctorToclinic{
 				DoctorID: ReturnNewObjectID("Dr Imran_AlreadyOnboarded"),
 				ClinicID: ReturnNewObjectID("Alchem clinic"),
 			},
 			mockRepoFn: &MockRepo{
-				SearchClinicMockFn: func(ctx context.Context, filter bson.M) ([]models.Clinic, error) {
-					return []models.Clinic{
+				SearchclinicMockFn: func(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
+					return []models.ClinicDoctor{
 						{
 							ID: ReturnNewObjectID("Alchem clinic"),
 						},
@@ -121,7 +121,7 @@ func TestAddDoctorToClinicOTPGenerationFn(t *testing.T) {
 				},
 			},
 			expectedErr: &structs.IAppError{
-				Message:    "Doctor Already Added To Clinic",
+				Message:    "Doctor Already Added To clinic",
 				Reason:     errors.New("doctor is already added to clinic").Error(),
 				ErrorObj:   errors.New("doctor is already added to clinic"),
 				StatusCode: http.StatusForbidden,
@@ -135,8 +135,8 @@ func TestAddDoctorToClinicOTPGenerationFn(t *testing.T) {
 		//first clear cache for keys
 		ResetMOngoDBCacheKeys()
 
-		service := NewClinicService(tc.mockRepoFn, nil, tc.Notifier, tc.OtpGenerator, tc.OTPCache)
-		err := service.AddDoctorToClinic(context.Background(), tc.clinicDetails)
+		service := NewclinicService(tc.mockRepoFn, nil, tc.Notifier, tc.OtpGenerator, tc.OTPCache)
+		err := service.AddDoctorToclinic(context.Background(), tc.clinicDetails)
 		if !tc.shouldReturnErr && err != nil {
 			t.Fatalf("Test name %s Unexpected error %v", tc.Name, err)
 		}

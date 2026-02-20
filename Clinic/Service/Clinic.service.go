@@ -2,15 +2,18 @@
 package service
 
 import (
-	interfaces "AlShifa/Clinic/Interfaces"
-	"AlShifa/Clinic/models"
 	appInterfaces "AlShifa/Interfaces"
-	structs "AlShifa/Structs"
-	utils "AlShifa/Utils"
+	interfaces "AlShifa/clinic/Interfaces"
+	DTO "AlShifa/clinic/dtos"
+	"AlShifa/clinic/models"
+	sharedModels "AlShifa/models"
+	structs "AlShifa/structs"
+	utils "AlShifa/utils"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,50 +21,66 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type ClinicService struct {
+type clinicService struct {
 	OTPNotifier  appInterfaces.INotifier[string, string]
 	OTPGenerator func(uniquePrefix string) string
 	Repo         interfaces.IRepository
 	MongoClient  *mongo.Client
 	//this is the cache which will be used to store otp when a clinic wants to add a doctor
-	AddDoctorToClinicAuthCache appInterfaces.ICache[string, models.AddDoctorOtpPayload]
+	OtpCache appInterfaces.ICache[string, models.AddDoctorOtpPayload]
 }
 
-func NewClinicService(repo interfaces.IRepository, mongoClient *mongo.Client, OTPNotifier appInterfaces.INotifier[string, string],
+func NewclinicService(repo interfaces.IRepository, mongoClient *mongo.Client, OTPNotifier appInterfaces.INotifier[string, string],
 	OTPGenerator func(uniquePrefix string) string,
-	authCache appInterfaces.ICache[string, models.AddDoctorOtpPayload]) *ClinicService {
-	return &ClinicService{
-		Repo:                       repo,
-		AddDoctorToClinicAuthCache: authCache,
-		OTPNotifier:                OTPNotifier,
-		OTPGenerator:               OTPGenerator,
-		MongoClient:                mongoClient,
+	authCache appInterfaces.ICache[string, models.AddDoctorOtpPayload]) *clinicService {
+	return &clinicService{
+		Repo:         repo,
+		OtpCache:     authCache,
+		OTPNotifier:  OTPNotifier,
+		OTPGenerator: OTPGenerator,
+		MongoClient:  mongoClient,
 	}
 }
 
 ///this ensures this service layer implements all methods of service layer interface
-var _ interfaces.IService = (*ClinicService)(nil)
+var _ interfaces.IService = (*clinicService)(nil)
 
-//AddDoctorToClinic function generate otp for adding doctor to clinic this process needs another function or handler to verify otp and then the process is completed
-func (service *ClinicService) AddDoctorToClinic(ctx context.Context, clinicDetails models.AddDoctorToClinic) *structs.IAppError {
+func (service *clinicService) FetchAppointments(ctx context.Context, groupBy string, filter bson.M) ([]sharedModels.Appointments, *structs.IAppError) {
+	//do little bit validation here filter can be empty but groupBy must be one of these user,doctor,clinic
+	groupingTagsAllowed := []string{"user", "doctor", "clinic"}
+	if !slices.Contains(groupingTagsAllowed, groupBy) {
+		return nil, &structs.IAppError{
+			Message:    "Invalid GroupBy Tags",
+			Reason:     "Invalid Grouping tag",
+			ErrorObj:   nil,
+			StatusCode: http.StatusBadRequest,
+		}
+	}
 
-	//now check if clinic exists with this clinicID
-	clinics, err := service.Repo.SearchClinic(ctx, bson.M{"_id": clinicDetails.ClinicID})
+	appointments, err := service.Repo.FetchAppointments(ctx, groupBy, filter)
 	if err != nil {
-		return &structs.IAppError{
-			Message:    "Failed to Add Doctor To Clinic",
+		return nil, &structs.IAppError{
+			Message:    "Failed to fetch appointments",
 			Reason:     err.Error(),
 			ErrorObj:   err,
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
 
-	if len(clinics) == 0 {
+	return appointments, nil
+}
+
+//AddDoctorToclinic function generate otp for adding doctor to clinic this process needs another function or handler to verify otp and then the process is completed
+func (service *clinicService) AddDoctorToclinic(ctx context.Context, clinicDetails models.AddDoctorToclinic) *structs.IAppError {
+	//now check if clinic exists with this ClinicID
+	fmt.Println("clinicid is", clinicDetails.ClinicID)
+	clinic, err := service.Repo.SearchclinicByID(ctx, clinicDetails.ClinicID)
+	if err != nil {
 		return &structs.IAppError{
-			Message:    "No Clinic Found With This Clinic",
-			Reason:     errors.New("no clinic found with clinic id").Error(),
-			ErrorObj:   errors.New("no clinic found with clinic id"),
-			StatusCode: http.StatusNotFound,
+			Message:    "Failed to Add Doctor To clinics",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusInternalServerError,
 		}
 	}
 
@@ -69,22 +88,32 @@ func (service *ClinicService) AddDoctorToClinic(ctx context.Context, clinicDetai
 	doctor, err := service.Repo.SearchDoctor(ctx, bson.M{"_id": clinicDetails.DoctorID})
 	if err != nil {
 		return &structs.IAppError{
-			Message:    "Failed to Add Doctor To Clinic",
+			Message:    "Failed to Add Doctor To clinic",
 			Reason:     err.Error(),
 			ErrorObj:   err,
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
 
-	//now here check if doctor has this clinicid in its clinics array throw error to prevent duplicates
-	for _, clinicData := range doctor.Clinics {
-		if clinicData.Clinic == clinicDetails.ClinicID {
-			return &structs.IAppError{
-				Message:    "This Doctor is already onboarded",
-				Reason:     "Doctor Already Onboarded",
-				ErrorObj:   errors.New("doctor Already Onboarded"),
-				StatusCode: http.StatusBadRequest,
-			}
+	//here check clinicDoctor model to check if this doctorid and ClinicID exists if yes it means doctor is already onboarded there
+	clinicDoctors, err := service.Repo.Searchclinic(ctx, bson.M{"ClinicID": clinic.ID, "doctorID": doctor.ID})
+	if err != nil {
+		return &structs.IAppError{
+			Message:    "Failed to Add Doctor To clinic",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	//if len of clinicdoctors is more than 0 with this clinicid and doctorid it means doctor is already onboarded to this clinic
+	if len(clinicDoctors) > 0 {
+		fmt.Println(clinicDoctors)
+		return &structs.IAppError{
+			Message:    "Doctor is already onboarded to this clinic",
+			Reason:     errors.New("duplicate onboarding").Error(),
+			ErrorObj:   errors.New("duplicate onboarding"),
+			StatusCode: http.StatusForbidden,
 		}
 	}
 
@@ -95,20 +124,22 @@ func (service *ClinicService) AddDoctorToClinic(ctx context.Context, clinicDetai
 	otpPayload := models.AddDoctorOtpPayload{
 		OTP:    otp,
 		Expiry: time.Now().Add(utils.OTPExpiry),
-		ClinicDetails: &models.AddDoctorToClinic{
-			WorkingDays: clinicDetails.WorkingDays,
-			StartTime:   clinicDetails.EndTime,
-			EndTime:     clinicDetails.EndTime,
-			ClinicID:    clinicDetails.ClinicID,
-			DoctorID:    clinicDetails.DoctorID,
+		ClinicDetails: &models.AddDoctorToclinic{
+			DoctorName:    doctor.Name,
+			ClinicName:    clinic.Name,
+			ClinicAddress: clinic.Address,
+			WorkingDays:   clinicDetails.WorkingDays,
+			StartTime:     clinicDetails.EndTime,
+			EndTime:       clinicDetails.EndTime,
+			ClinicID:      clinicDetails.ClinicID,
+			DoctorID:      clinicDetails.DoctorID,
 		},
 	}
 
-	fmt.Println("Otp is", otp)
 	//now save this otp payload in cache
-	if err := service.AddDoctorToClinicAuthCache.Set(ctx, otp, otpPayload, utils.CacheTTL); err != nil {
+	if err := service.OtpCache.Set(ctx, otp, otpPayload, utils.CacheTTL); err != nil {
 		return &structs.IAppError{
-			Message:    "Failed To Add Doctor To Clinic",
+			Message:    "Failed To Add Doctor To clinic",
 			Reason:     err.Error(),
 			ErrorObj:   err,
 			StatusCode: http.StatusForbidden,
@@ -119,7 +150,7 @@ func (service *ClinicService) AddDoctorToClinic(ctx context.Context, clinicDetai
 	notifierErr := service.OTPNotifier.SendNotification(doctor.Email, otp)
 	if notifierErr != nil {
 		return &structs.IAppError{
-			Message:    "Failed To Add Doctor To Clinic OTP Error",
+			Message:    "Failed To Add Doctor To clinic OTP Error",
 			Reason:     notifierErr.Error(),
 			ErrorObj:   notifierErr,
 			StatusCode: http.StatusForbidden,
@@ -131,11 +162,11 @@ func (service *ClinicService) AddDoctorToClinic(ctx context.Context, clinicDetai
 
 }
 
-func (service *ClinicService) VerifyAddDoctorToClinicOTP(ctx context.Context, otp string, doctorID primitive.ObjectID, clinicID primitive.ObjectID) *structs.IAppError {
+func (service *clinicService) VerifyAddDoctorToclinicOTP(ctx context.Context, otp string, doctorID primitive.ObjectID, ClinicID primitive.ObjectID) *structs.IAppError {
 	//check whether in cache this otp exists or not
-	otpToFind := fmt.Sprintf("%s:%s:%s", clinicID.Hex(), doctorID.Hex(), otp)
+	otpToFind := fmt.Sprintf("%s:%s:%s", ClinicID.Hex(), doctorID.Hex(), otp)
 	fmt.Print(otpToFind)
-	otpPayload, otpExists, err := service.AddDoctorToClinicAuthCache.Get(ctx, otpToFind)
+	otpPayload, otpExists, err := service.OtpCache.Get(ctx, otpToFind)
 	if !otpExists {
 		return &structs.IAppError{
 			Message:    "OTP Doesnt Exist",
@@ -154,7 +185,7 @@ func (service *ClinicService) VerifyAddDoctorToClinicOTP(ctx context.Context, ot
 	}
 
 	//now in otp payload check whether this clinicid is present in otp payload or not
-	if otpPayload.ClinicDetails.ClinicID != clinicID {
+	if otpPayload.ClinicDetails.ClinicID != ClinicID {
 		return &structs.IAppError{
 			Message:    "OTP Verification failed",
 			ErrorObj:   errors.New("clinic Doesnt Match"),
@@ -173,30 +204,7 @@ func (service *ClinicService) VerifyAddDoctorToClinicOTP(ctx context.Context, ot
 		}
 	}
 
-	//here first checks if this doctor is already onboarded it means its clinics array already contain this clinicid
-	doctor, err := service.Repo.SearchDoctor(ctx, bson.M{"clinics.clinic": clinicID})
-	if err != nil {
-		return &structs.IAppError{
-			Message:    "Failed to Onboard Doctor",
-			ErrorObj:   err,
-			Reason:     err.Error(),
-			StatusCode: http.StatusInternalServerError,
-		}
-	}
-
-	//now loop over doctor.clinics and check if this clinicid already exists there
-	for _, cliniDetails := range doctor.Clinics {
-		if cliniDetails.Clinic == clinicID {
-			return &structs.IAppError{
-				Message:    "This Doctor Is Already Onboarded",
-				ErrorObj:   errors.New("duplicate Onboarding"),
-				Reason:     errors.New("duplicate Onboarding").Error(),
-				StatusCode: http.StatusForbidden,
-			}
-		}
-	}
-
-	if err := service.Repo.AddDoctorToClinic(ctx, *otpPayload.ClinicDetails); err != nil {
+	if err := service.Repo.AddDoctorToclinic(ctx, *otpPayload.ClinicDetails); err != nil {
 		return &structs.IAppError{
 			Message:    "Failed to add doctor to clinic",
 			ErrorObj:   err,
@@ -206,7 +214,7 @@ func (service *ClinicService) VerifyAddDoctorToClinicOTP(ctx context.Context, ot
 	}
 
 	//here after verifying remove otp from redis also
-	if err := service.AddDoctorToClinicAuthCache.Delete(ctx, otp); err != nil {
+	if err := service.OtpCache.Delete(ctx, otpToFind); err != nil {
 		fmt.Print("Failed to remove otp aftr verification")
 	}
 
@@ -214,7 +222,7 @@ func (service *ClinicService) VerifyAddDoctorToClinicOTP(ctx context.Context, ot
 
 }
 
-func (service *ClinicService) RegisterClinic(ctx context.Context, ownerID primitive.ObjectID, clinicDetails models.Clinic) *structs.IAppError {
+func (service *clinicService) Registerclinic(ctx context.Context, ownerID primitive.ObjectID, clinicDetails models.Clinic) *structs.IAppError {
 
 	//now first check if against this ownerId owner exists or not
 	owners, ownerExistingErr := service.Repo.GetOwnerDetails(ctx, bson.M{"_id": ownerID})
@@ -225,7 +233,7 @@ func (service *ClinicService) RegisterClinic(ctx context.Context, ownerID primit
 	//now here check if owner already has a clinic dont allow another one
 	owner := owners[0]
 	if owner.Clinic != primitive.NilObjectID {
-		return utils.ReturnAppError(errors.New("clinic Already Exists For This Owner"), http.StatusUnauthorized, "Clinic Already exists", "Clinic Already exists")
+		return utils.ReturnAppError(errors.New("clinic Already Exists For This Owner"), http.StatusUnauthorized, "clinic Already exists", "clinic Already exists")
 	}
 
 	// set default values
@@ -233,7 +241,7 @@ func (service *ClinicService) RegisterClinic(ctx context.Context, ownerID primit
 	clinicDetails.Wallet = nil
 	clinicDetails.ID = primitive.NewObjectID()
 	clinicDetails.PlanType = utils.PlanPaid
-	registrationErr := service.Repo.RegisterClinic(ctx, ownerID, clinicDetails)
+	registrationErr := service.Repo.Registerclinic(ctx, ownerID, clinicDetails)
 	if registrationErr != nil {
 		fmt.Print(registrationErr)
 		return utils.ReturnAppError(registrationErr, 500, "Registration Failed", "Unknown reason")
@@ -243,7 +251,7 @@ func (service *ClinicService) RegisterClinic(ctx context.Context, ownerID primit
 
 }
 
-func (service *ClinicService) RegisterClinicOwner(ctx context.Context, ownerDetails models.Owner) *structs.IAppError {
+func (service *clinicService) RegisterclinicOwner(ctx context.Context, ownerDetails models.Owner) *structs.IAppError {
 
 	//now check if email or mobile exists
 	owners, ownerMongoDBErr := service.Repo.GetOwnerDetails(ctx, bson.M{"$or": []bson.M{
@@ -270,10 +278,10 @@ func (service *ClinicService) RegisterClinicOwner(ctx context.Context, ownerDeta
 	ownerDetails.RegistrationDate = time.Now().UTC()
 	ownerDetails.Clinic = primitive.NilObjectID
 	ownerDetails.ID = primitive.NewObjectID()
-	ownerDetails.Role = utils.RoleClinicOwner
+	ownerDetails.Role = utils.RoleclinicOwner
 
 	//now call the repo method to register owner
-	registrationErr := service.Repo.RegisterClinicOwner(ctx, ownerDetails)
+	registrationErr := service.Repo.RegisterclinicOwner(ctx, ownerDetails)
 	if registrationErr != nil {
 		return utils.ReturnAppError(registrationErr, 500, "Failed to register owner", "Server error")
 
@@ -285,16 +293,17 @@ func (service *ClinicService) RegisterClinicOwner(ctx context.Context, ownerDeta
 
 }
 
-func (service *ClinicService) SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError) {
-	clinics, err := service.Repo.SearchClinic(ctx, filter)
+func (service *clinicService) Searchclinic(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, *structs.IAppError) {
+	fmt.Print("hey ")
+	clinics, err := service.Repo.Searchclinic(ctx, filter)
 	if err != nil {
-		return nil, utils.ReturnAppError(err, 500, "Unable To Fetch Clinic details", err.Error())
+		return nil, utils.ReturnAppError(err, 500, "Unable To Fetch clinic details", err.Error())
 	}
 
 	return clinics, nil
 }
 
-func (service *ClinicService) SearchOwner(ctx context.Context, filter bson.M) ([]models.Owner, *structs.IAppError) {
+func (service *clinicService) SearchOwner(ctx context.Context, filter bson.M) ([]models.Owner, *structs.IAppError) {
 	owners, err := service.Repo.GetOwnerDetails(ctx, filter)
 	if err != nil {
 		fmt.Print(err, owners)
@@ -304,7 +313,7 @@ func (service *ClinicService) SearchOwner(ctx context.Context, filter bson.M) ([
 	return owners, nil
 }
 
-func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.Doctor) *structs.IAppError {
+func (service *clinicService) RegisterDoctor(ctx context.Context, doctor models.Doctor) *structs.IAppError {
 
 	//here check if doctor exists using mobile and phoneNumber
 	existingDoctors, err := service.Repo.SearchDoctors(ctx, bson.M{
@@ -328,7 +337,6 @@ func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.
 	}
 
 	//here set the default values
-	doctor.Clinics = []models.ClinicDetails{}
 	doctor.RegistrationDate = time.Now()
 	doctor.ID = primitive.NewObjectID()
 	doctor.Role = utils.RoleDoctor
@@ -346,7 +354,7 @@ func (service *ClinicService) RegisterDoctor(ctx context.Context, doctor models.
 	return nil
 }
 
-func (service *ClinicService) SearchDoctor(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, *structs.IAppError) {
+func (service *clinicService) SearchDoctor(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, *structs.IAppError) {
 
 	doctors, err := service.Repo.SearchDoctors(ctx, filter)
 	if err != nil {
@@ -361,7 +369,7 @@ func (service *ClinicService) SearchDoctor(ctx context.Context, filter bson.M) (
 	return doctors, nil
 }
 
-func (service *ClinicService) LoginClinicOwner(ctx context.Context, email string, password string) (string, *structs.IAppError) {
+func (service *clinicService) LoginclinicOwner(ctx context.Context, email string, password string) (string, *structs.IAppError) {
 	owners, err := service.Repo.GetOwnerDetails(ctx, bson.M{"email": email})
 	if err != nil {
 		return "", utils.ReturnAppError(err, 404, "Owner Not Found", "Invalid Email or Password")
@@ -386,7 +394,7 @@ func (service *ClinicService) LoginClinicOwner(ctx context.Context, email string
 	return token, nil
 }
 
-func (service *ClinicService) LoginDoctor(ctx context.Context, email string, password string) (string, *structs.IAppError) {
+func (service *clinicService) LoginDoctor(ctx context.Context, email string, password string) (string, *structs.IAppError) {
 	doctor, err := service.Repo.SearchDoctor(ctx, bson.M{"email": email})
 	if err != nil {
 		return "", utils.ReturnAppError(err, 404, "Doctor Not Found", "Invalid Email or Password")
@@ -403,47 +411,39 @@ func (service *ClinicService) LoginDoctor(ctx context.Context, email string, pas
 	return token, nil
 }
 
-func (service *ClinicService) AddAppointment(ctx context.Context, appointmentDetails models.Appointment) (*models.Appointment, *structs.IAppError) {
+func (service *clinicService) AddAppointment(ctx context.Context, appointmentDetails models.Appointment) (int, *structs.IAppError) {
 	//here check whether this doctorid and clinicid exists or not  and userid will be injected by jwt middleware
 
 	//now do the searches
 	doctors, err := service.SearchDoctor(ctx, bson.M{"_id": appointmentDetails.Doctor})
 	if err != nil {
-		return nil, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to add appoinment", err.Error())
+		return 0, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to add appoinment", err.Error())
 	}
 
 	if len(doctors) == 0 {
-		return nil, utils.ReturnAppError(errors.New("no doctor exists with this id"), http.StatusInternalServerError, "Failed to add appoinment", "no doctor exists with this id")
+		return 0, utils.ReturnAppError(errors.New("no doctor exists with this id"), http.StatusInternalServerError, "Failed to add appoinment", "no doctor exists with this id")
 	}
 
-	//get the first doctor
-	doctor := doctors[0]
-
 	//now search for this clinic
-	clinics, err := service.SearchClinic(ctx, bson.M{"_id": appointmentDetails.Clinic})
+	clinics, err := service.Searchclinic(ctx, bson.M{"_id": appointmentDetails.Clinic})
 	if err != nil {
-		return nil, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to add appoinment", err.Error())
+		return 0, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to add appoinment", err.Error())
 	}
 
 	if len(clinics) == 0 {
-		return nil, utils.ReturnAppError(errors.New("no clinic exists with this id"), http.StatusInternalServerError, "Failed to add appoinment", "no clinic exists with this id")
+		return 0, utils.ReturnAppError(errors.New("no clinic exists with this id"), http.StatusInternalServerError, "Failed to add appoinment", "no clinic exists with this id")
 	}
 
 	//get the first clinic
 	clinic := clinics[0]
 
-	//here check this doctor id must be present in the clinic.doctors array means it must be onboarded in this clinic
-	var doctorExistsInThisClinic bool
-	for _, clinicObjects := range doctor.Clinics {
-		if clinicObjects.Clinic == appointmentDetails.Clinic {
-			doctorExistsInThisClinic = true
-			break
-		}
-	}
+	doctor := doctors[0]
 
-	//if boolean is still false it means doctor is not onboarded to this clinic
-	if !doctorExistsInThisClinic {
-		return nil, utils.ReturnAppError(errors.New("this Doctor is Not onboarded yet"), http.StatusBadRequest, "Failed to add appoinment Doctor not onboarded to this clinic", "This Doctor is Not onboarded yet")
+	//here check using clinicDoctor whether this doctor is onboarded to this clinic or not
+	_, clinicsDetailsErr := service.Repo.Searchclinic(ctx, bson.M{"ClinicID": appointmentDetails.Clinic, "doctorID": doctor.ID})
+	if clinicsDetailsErr != nil {
+		err := errors.New("this doctor is not onboarded to this clinic")
+		return 0, utils.ReturnAppError(err, http.StatusNotFound, "Doctor Not Onboarded", err.Error())
 	}
 
 	//now add some defaults like status date
@@ -451,23 +451,37 @@ func (service *ClinicService) AddAppointment(ctx context.Context, appointmentDet
 	appointmentDetails.Status = "pending"
 	appointmentDetails.ID = primitive.NewObjectID()
 
-	appointmentCreated, appointmentErr := service.Repo.AddAppointment(ctx, clinic.MaxAppointments, appointmentDetails)
+	slotNumber, appointmentErr := service.Repo.AddAppointment(ctx, clinic.ClinicDetails.MaxAppointments, appointmentDetails)
 	if appointmentErr != nil {
 		//here check for duplicate key error if yes then send error as MaxSlots booked
 		if mongo.IsDuplicateKeyError(appointmentErr) {
-			return nil, utils.ReturnAppError(errors.New("max Appointments Reached For Today"), http.StatusExpectationFailed, "Max Appointments Reached For today", "Max Appointments Reached For today")
+			return 0, utils.ReturnAppError(errors.New("max Appointments Reached For Today"), http.StatusExpectationFailed, "Max Appointments Reached For today", "Max Appointments Reached For today")
 		}
-		return nil, utils.ReturnAppError(appointmentErr, http.StatusInternalServerError, "Failed to add appointment", appointmentErr.Error())
+		return 0, utils.ReturnAppError(appointmentErr, http.StatusInternalServerError, "Failed to add appointment", appointmentErr.Error())
 	}
-	return appointmentCreated, nil
+	return slotNumber, nil
 }
 
 //AppointmentSlotsBooked function returns slots for whom maxAppointment has reached so all those slot documents where maxAppointment has reached are returned
-func (service *ClinicService) AppointmentSlotsBooked(ctx context.Context, slotDetais models.SlotDetails) ([]models.Slot, *structs.IAppError) {
+func (service *clinicService) AppointmentSlotsBooked(ctx context.Context, slotDetais models.SlotDetails) ([]models.Slot, *structs.IAppError) {
 	slots, err := service.Repo.AppointmentSlotsBooked(ctx, slotDetais.MaxAppointments, slotDetais.ClinicID, slotDetais.DoctorID)
 	if err != nil {
 		return nil, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to Fetch Booked Slots", err.Error())
 	}
 
 	return slots, nil
+}
+
+func (service *clinicService) DoctorWithItsclinics(ctx context.Context, filter bson.M) ([]DTO.DoctorAtclinicsDTO, *structs.IAppError) {
+	doctorsDetails, err := service.Repo.FetchDoctorAtclinics(ctx, filter)
+	if err != nil {
+		return nil, &structs.IAppError{
+			Message:    "Failed to fetch  details",
+			StatusCode: http.StatusInternalServerError,
+			Reason:     err.Error(),
+			ErrorObj:   err,
+		}
+	}
+
+	return doctorsDetails, nil
 }

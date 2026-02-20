@@ -1,9 +1,9 @@
 package controller
 
 import (
-	middleware "AlShifa/Middleware"
-	structs "AlShifa/Structs"
-	models "AlShifa/Users/Models"
+	middleware "AlShifa/middleware"
+	structs "AlShifa/structs"
+	models "AlShifa/users/models"
 	"context"
 	"fmt"
 	"net/http"

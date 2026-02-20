@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"AlShifa/Clinic/models"
-	middleware "AlShifa/Middleware"
-	structs "AlShifa/Structs"
+	"AlShifa/clinic/models"
+	middleware "AlShifa/middleware"
+	structs "AlShifa/structs"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -17,12 +17,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func TestAddDoctorToClinicOTPHandler(t *testing.T) {
+func TestAddDoctorToclinicOTPHandler(t *testing.T) {
 	testCases := []struct {
 		Name                        string
-		Data                        models.AddDoctorToClinic
+		Data                        models.AddDoctorToclinic
 		ErrorExpected               bool
-		MockValidateClinicDetailsFn func(clinicDetails *models.AddDoctorToClinic) map[string]string
+		MockValidateclinicDetailsFn func(clinicDetails *models.AddDoctorToclinic) map[string]string
 		MockService                 *MockService
 		ExpectedErr                 *structs.IAppError
 		ExpectedStatusCode          int
@@ -30,7 +30,7 @@ func TestAddDoctorToClinicOTPHandler(t *testing.T) {
 	}{
 		{
 			Name: "Successfull eveything is ok",
-			Data: models.AddDoctorToClinic{
+			Data: models.AddDoctorToclinic{
 				DoctorID:    primitive.NewObjectID(),
 				StartTime:   time.Now().Add(1 * time.Hour),
 				EndTime:     time.Now().Add(7 * time.Hour),
@@ -40,16 +40,16 @@ func TestAddDoctorToClinicOTPHandler(t *testing.T) {
 			ExpectedStatusCode: http.StatusOK,
 			ExpectedErr:        nil,
 			OwnerID:            "696b86d0f1d4392b0bd68155",
-			MockValidateClinicDetailsFn: func(clinicDetails *models.AddDoctorToClinic) map[string]string {
+			MockValidateclinicDetailsFn: func(clinicDetails *models.AddDoctorToclinic) map[string]string {
 				return nil
 			},
 			MockService: &MockService{
-				SearchClinicFn: func(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError) {
-					return []models.Clinic{
+				SearchclinicFn: func(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, *structs.IAppError) {
+					return []models.clinicDoctor{
 						{ID: primitive.NewObjectID()},
 					}, nil
 				},
-				AddDoctorToClinicFn: func(ctx context.Context, clinicDetails models.AddDoctorToClinic) *structs.IAppError {
+				AddDoctorToclinicFn: func(ctx context.Context, clinicDetails models.AddDoctorToclinic) *structs.IAppError {
 					return nil
 				},
 			},
@@ -58,7 +58,7 @@ func TestAddDoctorToClinicOTPHandler(t *testing.T) {
 		{
 
 			Name: "Failed as ownerid is empty else eveything is ok",
-			Data: models.AddDoctorToClinic{
+			Data: models.AddDoctorToclinic{
 				DoctorID:    primitive.NewObjectID(),
 				StartTime:   time.Now().Add(1 * time.Hour),
 				EndTime:     time.Now().Add(7 * time.Hour),
@@ -73,16 +73,16 @@ func TestAddDoctorToClinicOTPHandler(t *testing.T) {
 				ErrorObj:   errors.New("ownerid is missing"),
 			},
 			OwnerID: "",
-			MockValidateClinicDetailsFn: func(clinicDetails *models.AddDoctorToClinic) map[string]string {
+			MockValidateclinicDetailsFn: func(clinicDetails *models.AddDoctorToclinic) map[string]string {
 				return nil
 			},
 			MockService: &MockService{
-				SearchClinicFn: func(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError) {
-					return []models.Clinic{
+				SearchclinicFn: func(ctx context.Context, filter bson.M) ([]models.clinicDoctor, *structs.IAppError) {
+					return []models.clinicDoctor{
 						{ID: primitive.NewObjectID()},
 					}, nil
 				},
-				AddDoctorToClinicFn: func(ctx context.Context, clinicDetails models.AddDoctorToClinic) *structs.IAppError {
+				AddDoctorToclinicFn: func(ctx context.Context, clinicDetails models.AddDoctorToclinic) *structs.IAppError {
 					return nil
 				},
 			},
@@ -90,7 +90,7 @@ func TestAddDoctorToClinicOTPHandler(t *testing.T) {
 		{
 
 			Name: "Failed as search clinic returned []clinic ",
-			Data: models.AddDoctorToClinic{
+			Data: models.AddDoctorToclinic{
 				DoctorID:    primitive.NewObjectID(),
 				StartTime:   time.Now().Add(1 * time.Hour),
 				EndTime:     time.Now().Add(7 * time.Hour),
@@ -99,23 +99,23 @@ func TestAddDoctorToClinicOTPHandler(t *testing.T) {
 			ErrorExpected:      true,
 			ExpectedStatusCode: http.StatusNotFound,
 			ExpectedErr: &structs.IAppError{
-				Message:    "No Clinic Found",
+				Message:    "No clinic Found",
 				StatusCode: http.StatusNotFound,
 				Reason:     errors.New("no clinic found").Error(),
 			},
 			OwnerID: "696b86d0f1d4392b0bd68155",
-			MockValidateClinicDetailsFn: func(clinicDetails *models.AddDoctorToClinic) map[string]string {
+			MockValidateclinicDetailsFn: func(clinicDetails *models.AddDoctorToclinic) map[string]string {
 				return nil
 			},
 			MockService: &MockService{
-				SearchClinicFn: func(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError) {
+				SearchclinicFn: func(ctx context.Context, filter bson.M) ([]models.clinicDoctor, *structs.IAppError) {
 					return nil, &structs.IAppError{
-						Message:    "No Clinic Found",
+						Message:    "No clinic Found",
 						StatusCode: http.StatusNotFound,
 						Reason:     errors.New("no clinic found").Error(),
 					}
 				},
-				AddDoctorToClinicFn: func(ctx context.Context, clinicDetails models.AddDoctorToClinic) *structs.IAppError {
+				AddDoctorToclinicFn: func(ctx context.Context, clinicDetails models.AddDoctorToclinic) *structs.IAppError {
 					return nil
 				},
 			},
@@ -127,7 +127,7 @@ func TestAddDoctorToClinicOTPHandler(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to convert data into json")
 		}
-		controller := NewController(tc.MockService, tc.MockValidateClinicDetailsFn)
+		controller := NewController(tc.MockService, tc.MockValidateclinicDetailsFn)
 		res := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/clinic", bytes.NewBuffer(jsonData))
 		req.Header.Set("Content-Type", "application/json")
@@ -135,7 +135,7 @@ func TestAddDoctorToClinicOTPHandler(t *testing.T) {
 		ctx := context.WithValue(req.Context(), middleware.ContextUserIDKey, tc.OwnerID)
 		req = req.WithContext(ctx)
 
-		controller.AddDoctorToClinic(res, req)
+		controller.AddDoctorToclinic(res, req)
 
 		if res.Code != tc.ExpectedStatusCode {
 			t.Fatalf("expected status %d, got %d. body=%s",

@@ -2,12 +2,12 @@
 package controller
 
 import (
-	interfaces "AlShifa/Clinic/Interfaces"
-	validators "AlShifa/Clinic/Validators"
-	"AlShifa/Clinic/models"
-	middleware "AlShifa/Middleware"
-	structs "AlShifa/Structs"
-	utils "AlShifa/Utils"
+	interfaces "AlShifa/clinic/Interfaces"
+	validators "AlShifa/clinic/Validators"
+	"AlShifa/clinic/models"
+	middleware "AlShifa/middleware"
+	structs "AlShifa/structs"
+	utils "AlShifa/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,34 +20,34 @@ import (
 
 type Controller struct {
 	Service                            interfaces.IService
-	ValidateAddDoctorToClinicDetailsFn func(details *models.AddDoctorToClinic) map[string]string
+	ValidateAddDoctorToclinicDetailsFn func(details *models.AddDoctorToclinic) map[string]string
 }
 
-type ClinicRegistration struct {
+type clinicRegistration struct {
 	OwnerID primitive.ObjectID `json:"ownerId"`
-	Clinic  models.Clinic      `json:"clinicDetails"`
+	clinic  models.Clinic      `json:"clinicDetails"`
 }
 
-func NewController(svr interfaces.IService, validateAddDoctorToClinicFn func(details *models.AddDoctorToClinic) map[string]string) *Controller {
+func NewController(svr interfaces.IService, validateAddDoctorToclinicFn func(details *models.AddDoctorToclinic) map[string]string) *Controller {
 	return &Controller{
 		Service:                            svr,
-		ValidateAddDoctorToClinicDetailsFn: validateAddDoctorToClinicFn,
+		ValidateAddDoctorToclinicDetailsFn: validateAddDoctorToclinicFn,
 	}
 }
 
-func (controller *Controller) RegisterClinic(res http.ResponseWriter, req *http.Request) {
+func (controller *Controller) Registerclinic(res http.ResponseWriter, req *http.Request) {
 
 	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
 	defer cancel()
 
-	var clinicRegistrationDetails ClinicRegistration
+	var clinicRegistrationDetails clinicRegistration
 	if err := json.NewDecoder(req.Body).Decode(&clinicRegistrationDetails); err != nil {
 		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, http.StatusBadRequest, "Invalid Details Provided", "Json Error"))
 		return
 	}
 
 	//here validate clinic details
-	validationErrors := validators.ValidateClinicDetails(&clinicRegistrationDetails.Clinic)
+	validationErrors := validators.ValidateclinicDetails(&clinicRegistrationDetails.clinic)
 	if len(validationErrors) != 0 {
 		fmt.Print(validationErrors)
 		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(validationErrors, 400, "Invalid Details", "Validation Failed"))
@@ -79,14 +79,14 @@ func (controller *Controller) RegisterClinic(res http.ResponseWriter, req *http.
 	//here add this id to clinicregistration details so that user can send any other owners id
 	clinicRegistrationDetails.OwnerID = ownerMongoDBID
 
-	registrationErr := controller.Service.RegisterClinic(ctx, clinicRegistrationDetails.OwnerID, clinicRegistrationDetails.Clinic)
+	registrationErr := controller.Service.Registerclinic(ctx, clinicRegistrationDetails.OwnerID, clinicRegistrationDetails.clinic)
 	if registrationErr != nil {
 		_ = utils.WriteResponse(res, registrationErr.StatusCode, registrationErr)
 		return
 	}
 
 	response := structs.IAppSuccess{
-		Message:    "Clinic Registered Successfully",
+		Message:    "clinic Registered Successfully",
 		Data:       nil,
 		StatusCode: 201,
 	}
@@ -115,7 +115,7 @@ func (controller *Controller) RegisterOwner(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	if err := controller.Service.RegisterClinicOwner(ctx, ownerDetails); err != nil {
+	if err := controller.Service.RegisterclinicOwner(ctx, ownerDetails); err != nil {
 		_ = utils.WriteResponse(res, http.StatusInternalServerError, err)
 		return
 	}
@@ -129,7 +129,7 @@ func (controller *Controller) RegisterOwner(res http.ResponseWriter, req *http.R
 	_ = utils.WriteResponse(res, http.StatusCreated, response)
 }
 
-func (controller *Controller) SearchClinic(res http.ResponseWriter, req *http.Request) {
+func (controller *Controller) Searchclinic(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
 	defer cancel()
 
@@ -142,7 +142,7 @@ func (controller *Controller) SearchClinic(res http.ResponseWriter, req *http.Re
 	_ = utils.TransformParamIDS(params, filters)
 
 	// Call your service with filters
-	clinics, err := controller.Service.SearchClinic(ctx, filters)
+	clinics, err := controller.Service.Searchclinic(ctx, filters)
 	if err != nil {
 		_ = utils.WriteResponse(res, http.StatusInternalServerError, err)
 		return
@@ -260,7 +260,7 @@ func (controller *Controller) SearchDoctor(res http.ResponseWriter, req *http.Re
 
 }
 
-func (controller *Controller) LoginClinicOwner(res http.ResponseWriter, req *http.Request) {
+func (controller *Controller) LoginclinicOwner(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
 	defer cancel()
 
@@ -270,7 +270,7 @@ func (controller *Controller) LoginClinicOwner(res http.ResponseWriter, req *htt
 		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, 500, "Login Failed", "Invalid Json"))
 		return
 	}
-	jwtToken, err := controller.Service.LoginClinicOwner(ctx, loginDetails.Email, loginDetails.Password)
+	jwtToken, err := controller.Service.LoginclinicOwner(ctx, loginDetails.Email, loginDetails.Password)
 	if err != nil {
 		_ = utils.WriteResponse(res, err.StatusCode, err)
 		return
@@ -303,7 +303,7 @@ func (controller *Controller) LoginDoctor(res http.ResponseWriter, req *http.Req
 	})
 }
 
-func (controller *Controller) AddDoctorToClinic(res http.ResponseWriter, req *http.Request) {
+func (controller *Controller) AddDoctorToclinic(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
 	defer cancel()
 
@@ -329,23 +329,23 @@ func (controller *Controller) AddDoctorToClinic(res http.ResponseWriter, req *ht
 	fmt.Print("reached here")
 
 	//now extract clinicdetails from req.payload
-	var clinicDetails models.AddDoctorToClinic
+	var clinicDetails models.AddDoctorToclinic
 	if err := json.NewDecoder(req.Body).Decode(&clinicDetails); err != nil {
 		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(err, http.StatusBadRequest, "InValid JsonDetails", "Invalid Json Details"))
 		return
 	}
 
 	//now validate details first
-	validationErrors := controller.ValidateAddDoctorToClinicDetailsFn(&clinicDetails)
+	validationErrors := controller.ValidateAddDoctorToclinicDetailsFn(&clinicDetails)
 	if validationErrors != nil {
 		_ = utils.WriteResponse(res, http.StatusBadRequest, utils.ReturnAppError(validationErrors, http.StatusBadRequest, "Invalid Details", "validation Failed"))
 		return
 	}
 
 	//now using ownerMongoDbID find its associated clinic
-	owners, searchClinicErr := controller.Service.SearchOwner(ctx, bson.M{"_id": ownerMongoDBID})
-	if searchClinicErr != nil {
-		_ = utils.WriteResponse(res, searchClinicErr.StatusCode, searchClinicErr)
+	owners, searchclinicErr := controller.Service.SearchOwner(ctx, bson.M{"_id": ownerMongoDBID})
+	if searchclinicErr != nil {
+		_ = utils.WriteResponse(res, searchclinicErr.StatusCode, searchclinicErr)
 		return
 	}
 
@@ -363,7 +363,7 @@ func (controller *Controller) AddDoctorToClinic(res http.ResponseWriter, req *ht
 	clinicDetails.ClinicID = owners[0].Clinic
 
 	//now as we have clinic also now fit details such as clinicid in clinic details and pass this info to service layer
-	if err := controller.Service.AddDoctorToClinic(ctx, clinicDetails); err != nil {
+	if err := controller.Service.AddDoctorToclinic(ctx, clinicDetails); err != nil {
 		_ = utils.WriteResponse(res, err.StatusCode, err)
 		return
 	}
@@ -375,7 +375,7 @@ func (controller *Controller) AddDoctorToClinic(res http.ResponseWriter, req *ht
 	})
 }
 
-func (controller *Controller) VerifyAddDoctorToClinicOtp(res http.ResponseWriter, req *http.Request) {
+func (controller *Controller) VerifyAddDoctorToclinicOtp(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
 	defer cancel()
 
@@ -447,7 +447,7 @@ func (controller *Controller) VerifyAddDoctorToClinicOtp(res http.ResponseWriter
 	clinicID := owners[0].Clinic
 
 	//now pass these details to service layer
-	if err := controller.Service.VerifyAddDoctorToClinicOTP(ctx, otpPayload.OTP, doctorMongoDBID, clinicID); err != nil {
+	if err := controller.Service.VerifyAddDoctorToclinicOTP(ctx, otpPayload.OTP, doctorMongoDBID, clinicID); err != nil {
 		_ = utils.WriteResponse(res, err.StatusCode, err)
 		return
 	}
@@ -477,13 +477,13 @@ func (controller *Controller) AddAppointment(res http.ResponseWriter, req *http.
 	}
 
 	//now call the service layer method
-	appointment, err := controller.Service.AddAppointment(ctx, appointmentDetails)
+	slotBooked, err := controller.Service.AddAppointment(ctx, appointmentDetails)
 	if err != nil {
 		_ = utils.WriteResponse(res, err.StatusCode, err)
 		return
 	}
 
-	_ = utils.WriteResponse(res, http.StatusCreated, utils.ReturnAppSuccess(http.StatusCreated, "Appointment Booked", appointment))
+	_ = utils.WriteResponse(res, http.StatusCreated, utils.ReturnAppSuccess(http.StatusCreated, "Appointment Booked", slotBooked))
 
 }
 
@@ -509,5 +509,32 @@ func (controller *Controller) AppointmentSlotsBooked(res http.ResponseWriter, re
 	}
 
 	_ = utils.WriteResponse(res, http.StatusOK, utils.ReturnAppSuccess(http.StatusOK, "Successfully Fetched Slots booked", slots))
+
+}
+
+func (controller *Controller) FetchDoctorWithItsclinics(res http.ResponseWriter, req *http.Request) {
+	//try to parse query params
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+
+	params := req.URL.Query()
+
+	filter := bson.M{}
+
+	_ = utils.TransformParamIDS(params, filter)
+
+	fmt.Print("filter is", filter)
+
+	doctorWithItsclinics, err := controller.Service.DoctorWithItsclinics(ctx, filter)
+	if err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
+		Message:    "Successfully fetched Doctor Details",
+		Data:       doctorWithItsclinics,
+		StatusCode: http.StatusOK,
+	})
 
 }

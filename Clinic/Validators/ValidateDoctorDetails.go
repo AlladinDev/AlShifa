@@ -1,7 +1,7 @@
 package validators
 
 import (
-	"AlShifa/Clinic/models"
+	"AlShifa/clinic/models"
 	"net/mail"
 	"strings"
 	"unicode/utf8"

@@ -1,7 +1,7 @@
 package utils
 
 import (
-	structs "AlShifa/Structs"
+	structs "AlShifa/structs"
 	"encoding/json"
 	"net/http"
 )

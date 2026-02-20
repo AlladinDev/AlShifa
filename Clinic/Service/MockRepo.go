@@ -1,56 +1,73 @@
 package service
 
 import (
-	interfaces "AlShifa/Clinic/Interfaces"
-	"AlShifa/Clinic/models"
+	interfaces "AlShifa/clinic/Interfaces"
+	DTO "AlShifa/clinic/dtos"
+	"AlShifa/clinic/models"
 	"context"
 	"log"
 
+	sharedModels "AlShifa/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type MockRepo struct {
-	RegisterClinicMockFn      func(ctx context.Context, ownerID primitive.ObjectID, clinic models.Clinic) error
-	RegisterClinicOwnerMockFn func(ctx context.Context, owner models.Owner) error
+	RegisterclinicMockFn      func(ctx context.Context, ownerID primitive.ObjectID, clinic models.Clinic) error
+	RegisterclinicOwnerMockFn func(ctx context.Context, owner models.Owner) error
 	GetOwnerDetailsMockFn     func(ctx context.Context, filter bson.M) ([]models.Owner, error)
-	SearchClinicMockFn        func(ctx context.Context, filter bson.M) ([]models.Clinic, error)
+	SearchclinicMockFn        func(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error)
 	RegisterDoctorMockFn      func(ctx context.Context, doctorDetails models.Doctor) error
 	SearchDoctorsMockFn       func(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, error)
 	SearchDoctorMockFn        func(ctx context.Context, filter bson.M) (models.Doctor, error)
-	AddDoctorToClinicMockFn   func(ctx context.Context, clinicDetails models.AddDoctorToClinic) error
-	AddAppointmentMockFn      func(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (*models.Appointment, error)
+	AddDoctorToclinicMockFn   func(ctx context.Context, clinicDetails models.AddDoctorToclinic) error
+	AddAppointmentMockFn      func(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (int, error)
+	SearchclinicByIDFn        func(ctx context.Context, clinicID primitive.ObjectID) (*models.Clinic, error)
+	FetchDoctorAtclinicsFn    func(ctx context.Context, filter bson.M) ([]DTO.DoctorAtclinicsDTO, error)
+	FetchAppointmentsFn       func(ctx context.Context, groupBy string, filter bson.M) ([]sharedModels.Appointments, error)
 	AppointmentSlotsBookedFn  func(ctx context.Context, maxAppointments int, clinicID primitive.ObjectID, doctorID primitive.ObjectID) ([]models.Slot, error)
 }
 
 var _ interfaces.IRepository = (*MockRepo)(nil)
 
-func (m *MockRepo) RegisterClinic(ctx context.Context, clinicID primitive.ObjectID, clinic models.Clinic) error {
-	if m.RegisterClinicMockFn == nil {
-		log.Fatal("RegisterClinicMockFn not implemented in MockRepository of clinic service")
+func (m *MockRepo) Registerclinic(ctx context.Context, clinicID primitive.ObjectID, clinic models.Clinic) error {
+	if m.RegisterclinicMockFn == nil {
+		log.Fatal("RegisterclinicMockFn not implemented in MockRepository of clinic service")
 	}
-	return m.RegisterClinicMockFn(ctx, clinicID, clinic)
+	return m.RegisterclinicMockFn(ctx, clinicID, clinic)
 }
 
-func (m *MockRepo) AddDoctorToClinic(ctx context.Context, clinicDetails models.AddDoctorToClinic) error {
-	if m.AddDoctorToClinicMockFn == nil {
-		log.Fatal("AddDoctorToClinicMockFn not implemented in MockRepository of clinic service")
+func (m *MockRepo) FetchAppointments(ctx context.Context, groupBy string, filter bson.M) ([]sharedModels.Appointments, error) {
+	if m.FetchAppointmentsFn == nil {
+		log.Fatal("FetchAppointmentsFn not implemented in MockRepository of clinic service")
 	}
-	return m.AddDoctorToClinicMockFn(ctx, clinicDetails)
+	return m.FetchAppointmentsFn(ctx, groupBy, filter)
+}
+func (m *MockRepo) SearchclinicByID(ctx context.Context, clinicID primitive.ObjectID) (*models.Clinic, error) {
+	if m.SearchclinicByIDFn == nil {
+		log.Fatal("RegisterclinicMockFn not implemented in MockRepository of clinic service")
+	}
+	return m.SearchclinicByIDFn(ctx, clinicID)
+}
+func (m *MockRepo) AddDoctorToclinic(ctx context.Context, clinicDetails models.AddDoctorToclinic) error {
+	if m.AddDoctorToclinicMockFn == nil {
+		log.Fatal("AddDoctorToclinicMockFn not implemented in MockRepository of clinic service")
+	}
+	return m.AddDoctorToclinicMockFn(ctx, clinicDetails)
 }
 
-func (m *MockRepo) RegisterClinicOwner(ctx context.Context, owner models.Owner) error {
-	if m.RegisterClinicOwnerMockFn == nil {
-		log.Fatal("RegisterClinicOwner not implemented in MockRepository of clinic service")
+func (m *MockRepo) RegisterclinicOwner(ctx context.Context, owner models.Owner) error {
+	if m.RegisterclinicOwnerMockFn == nil {
+		log.Fatal("RegisterclinicOwner not implemented in MockRepository of clinic service")
 	}
-	return m.RegisterClinicOwnerMockFn(ctx, owner)
+	return m.RegisterclinicOwnerMockFn(ctx, owner)
 }
 
-func (m *MockRepo) SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic, error) {
-	if m.SearchClinicMockFn == nil {
-		log.Fatal("SearchClinic not implemented in MockRepository of clinic service")
+func (m *MockRepo) Searchclinic(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
+	if m.SearchclinicMockFn == nil {
+		log.Fatal("Searchclinic not implemented in MockRepository of clinic service")
 	}
-	return m.SearchClinicMockFn(ctx, filter)
+	return m.SearchclinicMockFn(ctx, filter)
 }
 
 func (m *MockRepo) GetOwnerDetails(ctx context.Context, filter bson.M) ([]models.Owner, error) {
@@ -81,7 +98,7 @@ func (m *MockRepo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.D
 	return m.SearchDoctorsMockFn(ctx, filter)
 }
 
-func (m *MockRepo) AddAppointment(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (*models.Appointment, error) {
+func (m *MockRepo) AddAppointment(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (int, error) {
 	if m.AddAppointmentMockFn == nil {
 		log.Fatal("AddAppointmentMockFn not implemented in MockRepository of clinic service")
 	}
@@ -93,4 +110,11 @@ func (m *MockRepo) AppointmentSlotsBooked(ctx context.Context, maxAppointments i
 		log.Fatal("AppointmentSlotsBookedFn not implemented in MockRepository of clinic service")
 	}
 	return m.AppointmentSlotsBookedFn(ctx, maxAppointments, clinicID, doctorID)
+}
+
+func (m *MockRepo) FetchDoctorAtclinics(ctx context.Context, filter bson.M) ([]DTO.DoctorAtclinicsDTO, error) {
+	if m.FetchDoctorAtclinicsFn == nil {
+		log.Fatal("FetchDoctorAtclinicsFn is not implemented in mock repo of clinic module")
+	}
+	return m.FetchDoctorAtclinics(ctx, filter)
 }

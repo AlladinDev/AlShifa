@@ -2,7 +2,7 @@
 package interfaces
 
 import (
-	models "AlShifa/Users/Models"
+	models "AlShifa/users/models"
 	"context"
 
 	"go.mongodb.org/mongo-driver/bson"

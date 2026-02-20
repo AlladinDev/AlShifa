@@ -1,8 +1,8 @@
 package validators
 
 import (
-	"AlShifa/Clinic/models"
-	middleware "AlShifa/Middleware"
+	"AlShifa/clinic/models"
+	middleware "AlShifa/middleware"
 	"context"
 	"fmt"
 	"testing"
@@ -104,7 +104,7 @@ func TestValidateAppointmentDetails(t *testing.T) {
 			wantErrors: map[string]string{"patientMobile": "Patient mobile must be a valid 10-digit number"},
 		},
 		{
-			name:      "invalid clinic and doctor IDs",
+			name:      "invalid Clinic and doctor IDs",
 			ctxUserID: validID,
 			appointment: models.Appointment{
 				AppointmentDate: time.Now().Add(24 * time.Hour),
@@ -115,7 +115,7 @@ func TestValidateAppointmentDetails(t *testing.T) {
 				Doctor:          primitive.NilObjectID,
 			},
 			wantErrors: map[string]string{
-				"clinic": "Clinic ID is not a valid MongoDB ObjectID",
+				"Clinic": "Clinic ID is not a valid MongoDB ObjectID",
 				"doctor": "Doctor ID is not a valid MongoDB ObjectID",
 			},
 		},

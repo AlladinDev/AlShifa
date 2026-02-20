@@ -2,8 +2,8 @@
 package repository
 
 import (
-	interfaces "AlShifa/Users/Interfaces"
-	models "AlShifa/Users/Models"
+	interfaces "AlShifa/users/interfaces"
+	models "AlShifa/users/models"
 	"context"
 
 	"go.mongodb.org/mongo-driver/bson"

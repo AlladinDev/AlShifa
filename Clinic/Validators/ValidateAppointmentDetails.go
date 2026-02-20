@@ -1,8 +1,8 @@
 package validators
 
 import (
-	"AlShifa/Clinic/models"
-	middleware "AlShifa/Middleware"
+	"AlShifa/clinic/models"
+	middleware "AlShifa/middleware"
 	"context"
 	"time"
 
@@ -71,15 +71,15 @@ func ValidateAppointmentDetails(appointmentDetails *models.Appointment, ctx cont
 	}
 
 	// --------------------------
-	// 6. Validate Clinic ID (string -> ObjectID)
+	// 6. Validate clinic ID (string -> ObjectID)
 	// --------------------------
 
 	id, err := primitive.ObjectIDFromHex(appointmentDetails.Clinic.Hex())
 	if err != nil {
-		errors["clinic"] = "Clinic ID is not a valid MongoDB ObjectID"
+		errors["clinic"] = "clinic ID is not a valid MongoDB ObjectID"
 	}
 	if appointmentDetails.Clinic == primitive.NilObjectID {
-		errors["clinic"] = "Clinic ID is not a valid MongoDB ObjectID"
+		errors["clinic"] = "clinic ID is not a valid MongoDB ObjectID"
 	} else {
 		appointmentDetails.Clinic = id
 	}

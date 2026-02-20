@@ -2,19 +2,20 @@
 package controller
 
 import (
-	middleware "AlShifa/Middleware"
-	structs "AlShifa/Structs"
-	validators "AlShifa/Users/Validators"
-
-	interfaces "AlShifa/Users/Interfaces"
-	models "AlShifa/Users/Models"
-	userModuleStructs "AlShifa/Users/Structs"
-	utils "AlShifa/Utils"
+	middleware "AlShifa/middleware"
+	structs "AlShifa/structs"
+	interfaces "AlShifa/users/interfaces"
+	models "AlShifa/users/models"
+	userModuleStructs "AlShifa/users/structs"
+	validators "AlShifa/users/validators"
+	utils "AlShifa/utils"
+	"fmt"
 
 	"context"
 	"encoding/json"
 	"net/http"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -131,7 +132,7 @@ func (controller *UserController) LoginUser(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	jwtToken, err := controller.Service.LoginUser(ctx, loginDetails.Mobile, loginDetails.Password)
+	jwtToken, err := controller.Service.LoginUser(ctx, loginDetails.Email, loginDetails.Password)
 	if err != nil {
 		_ = utils.WriteResponse(res, err.StatusCode, err)
 		return
@@ -141,6 +142,45 @@ func (controller *UserController) LoginUser(res http.ResponseWriter, req *http.R
 		Message:    "Login Successful",
 		Data:       utils.JwtPrefix + jwtToken,
 		StatusCode: 200,
+	})
+
+}
+
+func (controller *UserController) FetchAppointments(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
+	defer cancel()
+	//first get the userid it will be default filter so that user can see only his appointments and not of anyone else
+	userIDAny := req.Context().Value(middleware.ContextUserIDKey)
+	fmt.Println("inside controller", userIDAny)
+
+	userMongoDBErr, userMongoDBID := utils.ParseUserID(userIDAny)
+	if userMongoDBErr != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, &structs.IAppError{
+			Message:    "Invalid UserID",
+			Reason:     userMongoDBErr.Error(),
+			ErrorObj:   userMongoDBErr,
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	//now fetch other filters such as doctorname appointmentDate clinicName
+	params := req.URL.Query()
+	filter := bson.M{}
+	//add the userid in filter
+	filter["user"] = userMongoDBID
+	utils.TransformParamIDS(params, filter)
+
+	appointments, err := controller.Service.FetchAppointments(ctx, "user", filter)
+	if err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusOK, &structs.IAppSuccess{
+		Message:    "Successfully fetched appointments",
+		StatusCode: http.StatusOK,
+		Data:       appointments,
 	})
 
 }

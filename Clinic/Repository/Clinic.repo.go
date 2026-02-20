@@ -2,12 +2,14 @@
 package repository
 
 import (
-	"AlShifa/Clinic/models"
+	DTO "AlShifa/clinic/dtos"
+	"AlShifa/clinic/models"
+	sharedModels "AlShifa/models"
 	"context"
 	"errors"
 	"fmt"
 
-	interfaces "AlShifa/Clinic/Interfaces"
+	interfaces "AlShifa/clinic/Interfaces"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -52,12 +54,21 @@ func InitialiseIndexes(collection *mongo.Collection) error {
 	return nil
 }
 
-func (r *Repo) RegisterClinicOwner(ctx context.Context, owner models.Owner) error {
+func (r *Repo) RegisterclinicOwner(ctx context.Context, owner models.Owner) error {
 	_, err := r.DB.Collection("Owner").InsertOne(ctx, owner)
 	return err
 }
 
-func (r *Repo) RegisterClinic(
+func (r *Repo) SearchclinicByID(ctx context.Context, clinicID primitive.ObjectID) (*models.Clinic, error) {
+	res := r.DB.Collection("clinic").FindOne(ctx, bson.M{"_id": clinicID})
+	var clinic models.Clinic
+	if err := res.Decode(&clinic); err != nil {
+		return nil, err
+	}
+	return &clinic, nil
+}
+
+func (r *Repo) Registerclinic(
 	ctx context.Context,
 	ownerID primitive.ObjectID,
 	clinic models.Clinic,
@@ -71,7 +82,7 @@ func (r *Repo) RegisterClinic(
 
 	callback := func(sessCtx mongo.SessionContext) (any, error) {
 		// 1️⃣ Insert clinic
-		res, err := r.DB.Collection("Clinic").InsertOne(sessCtx, clinic)
+		res, err := r.DB.Collection("clinic").InsertOne(sessCtx, clinic)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +119,7 @@ func (r *Repo) GetOwnerDetails(ctx context.Context, filter bson.M) ([]models.Own
 		bson.D{{Key: "$match", Value: filter}},
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
-				{Key: "from", Value: "Clinic"},
+				{Key: "from", Value: "clinic"},
 				{Key: "localField", Value: "clinic"},
 				{Key: "foreignField", Value: "_id"},
 				{Key: "as", Value: "clinicDetails"},
@@ -117,6 +128,14 @@ func (r *Repo) GetOwnerDetails(ctx context.Context, filter bson.M) ([]models.Own
 			"path":                       "$clinicDetails",
 			"preserveNullAndEmptyArrays": true,
 		}},
+		},
+		bson.D{
+			{Key: "$project", Value: bson.D{
+				{Key: "registrationDate", Value: 0},
+				{Key: "clinicDetails.registrationDate", Value: 0},
+				{Key: "clinicDetails.ownerDetails", Value: 0},
+				{Key: "clinicDetails.doctorDetails", Value: 0},
+			}},
 		},
 	}
 	cursor, err := r.DB.Collection("Owner").Aggregate(ctx, pipeline)
@@ -134,57 +153,71 @@ func (r *Repo) GetOwnerDetails(ctx context.Context, filter bson.M) ([]models.Own
 	return owners, nil
 }
 
-func (r *Repo) SearchClinic(ctx context.Context, filter bson.M) ([]models.Clinic, error) {
+func (r *Repo) Searchclinic(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
+	fmt.Println("hey buddy")
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: filter}},
+
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Doctor"},
-			{Key: "localField", Value: "_id"},
-			{Key: "foreignField", Value: "clinics.clinic"},
+			{Key: "localField", Value: "doctorID"},
+			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "doctorDetails"},
 		}}},
 
 		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$doctorDetails"},
+			}}},
+
+		bson.D{
 			{Key: "$lookup", Value: bson.D{
-				{Key: "from", Value: "Owner"},
-				{Key: "localField", Value: "_id"},
-				{Key: "foreignField", Value: "clinic"},
-				{Key: "as", Value: "ownerDetails"},
+				{Key: "from", Value: "clinic"},
+				{Key: "localField", Value: "clinicID"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "clinicDetails"},
 			}},
 		},
+
 		bson.D{
 			{Key: "$unwind", Value: bson.D{
-				{Key: "path", Value: "$ownerDetails"},
-				{Key: "preserveNullAndEmptyArrays", Value: true},
+				{Key: "path", Value: "$clinicDetails"},
 			}},
 		},
 
 		bson.D{
 			{Key: "$project", Value: bson.D{
-				{Key: "ownerDetails.password", Value: 0},
 				{Key: "doctorDetails.password", Value: 0},
-				{Key: "ownerDetails.gender", Value: 0},
-				{Key: "ownerDetails.email", Value: 0},
-				{Key: "ownerDetails.registrationDate", Value: 0},
-				{Key: "ownerDetails._id", Value: 0},
-				{Key: "ownerDetails.clinic", Value: 0},
-				{Key: "ownerDetails.role", Value: 0},
-				{Key: "doctorDetails.registrationDate", Value: 0},
-				{Key: "doctorDetails._id", Value: 0},
-				{Key: "doctorDetails.email", Value: 0},
-				{Key: "doctorDetails.clinics", Value: 0},
-				{Key: "doctorDetails.role", Value: 0},
+			}},
+		},
+
+		bson.D{
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: "$clinicID"},
+				{Key: "clinicDetails", Value: bson.D{
+					{Key: "$first", Value: "$clinicDetails"},
+				}},
+				{Key: "doctors", Value: bson.D{
+					{Key: "$push", Value: bson.D{
+						{Key: "$mergeObjects", Value: bson.A{
+							"$doctorDetails",
+							bson.D{{Key: "startTime", Value: "$startTime"}},
+							bson.D{{Key: "endTime", Value: "$endTime"}},
+							bson.D{{Key: "workingDays", Value: "$workingDays"}},
+						}},
+					}},
+				}},
 			}},
 		},
 	}
 
-	cursor, err := r.DB.Collection("Clinic").Aggregate(ctx, pipeline)
+	cursor, err := r.DB.Collection("clinicDoctor").Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	var results []models.Clinic
+	var results []models.ClinicDoctor
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
@@ -208,7 +241,7 @@ func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Docto
 		}}},
 
 		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Clinic"},
+			{Key: "from", Value: "clinic"},
 			{Key: "localField", Value: "clinics.clinic"},
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "clinics.information"},
@@ -237,7 +270,6 @@ func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.Docto
 	if err := cursor.All(ctx, &doctors); err != nil {
 		return nil, err
 	}
-	fmt.Print("doctors are", doctors)
 
 	return doctors, nil
 }
@@ -250,31 +282,16 @@ func (r *Repo) SearchDoctor(ctx context.Context, filter bson.M) (models.Doctor, 
 	return doctor, err
 }
 
-func (r *Repo) AddDoctorToClinic(ctx context.Context, clinicDetails models.AddDoctorToClinic) error {
-
-	doctorUpdationRes := r.DB.Collection("Doctor").FindOneAndUpdate(ctx, bson.M{"_id": clinicDetails.DoctorID}, bson.M{
-		"$push": bson.M{
-			"clinics": models.ClinicDetails{
-				StartTime:   clinicDetails.StartTime,
-				EndTime:     clinicDetails.EndTime,
-				WorkingDays: clinicDetails.WorkingDays,
-				Clinic:      clinicDetails.ClinicID,
-			},
-		},
-	})
-
-	if doctorUpdationRes.Err() != nil {
-		return doctorUpdationRes.Err()
-	}
-
-	return nil
+func (r *Repo) AddDoctorToclinic(ctx context.Context, clinicDetails models.AddDoctorToclinic) error {
+	_, err := r.DB.Collection("clinicDoctor").InsertOne(ctx, clinicDetails)
+	return err
 }
 
-func (r *Repo) AddAppointment(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (*models.Appointment, error) {
+func (r *Repo) AddAppointment(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (int, error) {
 	//here first update slot document using upsert to ensure if it is not present create it if present updates its slots booked by 1
 	session, err := r.DB.Client().StartSession()
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	defer session.EndSession(ctx)
 
@@ -322,16 +339,16 @@ func (r *Repo) AddAppointment(ctx context.Context, maxAppointments int, appointm
 
 	res, transactionErr := session.WithTransaction(ctx, transactionFn)
 	if transactionErr != nil {
-		return nil, transactionErr
+		return 0, transactionErr
 	}
 
 	//now try to convert res into appointment model
 	appointmentCreated, ok := res.(models.Appointment)
 	if !ok {
-		return nil, errors.New("failed to return appointment Created")
+		return 0, errors.New("failed to return appointment Created")
 	}
 
-	return &appointmentCreated, nil
+	return appointmentCreated.Slot, nil
 
 }
 
@@ -353,4 +370,118 @@ func (r *Repo) AppointmentSlotsBooked(ctx context.Context, maxAppointments int, 
 	}
 
 	return slots, nil
+}
+
+// FetchDoctorWithclinics function fetches a doctor using doctor name or doctorid along with its clinics where he/she works
+func (r *Repo) FetchDoctorAtclinics(ctx context.Context, filter bson.M) ([]DTO.DoctorAtclinicsDTO, error) {
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Doctor"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "localField", Value: "doctorID"},
+			{Key: "as", Value: "doctorDetails"},
+		},
+		}},
+
+		bson.D{
+			{Key: "$unwind", Value: "$doctorDetails"},
+		},
+
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "clinic"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "localField", Value: "clinicID"},
+				{Key: "as", Value: "clinicDetails"},
+			}},
+		},
+
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$clinicDetails"},
+			}},
+		},
+
+		bson.D{
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: "$doctorID"},
+				{Key: "doctorDetails", Value: bson.D{{Key: "$first", Value: "$doctorDetails"}}},
+				{Key: "clinics", Value: bson.D{
+					{Key: "$push", Value: bson.D{
+						{Key: "$mergeObjects", Value: bson.A{
+							"$clinicDetails",
+							bson.D{{Key: "workingDays", Value: "$workingDays"}},
+							bson.D{{Key: "startTime", Value: "$startTiming"}},
+							bson.D{{Key: "endTime", Value: "$endTime"}},
+						}},
+					}},
+				}},
+			}},
+		},
+
+		bson.D{
+			{Key: "$project", Value: bson.D{
+				{Key: "doctorDetails.password", Value: 0},
+				{Key: "doctorDetails.email", Value: 0},
+			}},
+		},
+	}
+
+	cursor, err := r.DB.Collection("clinicDoctor").Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var doctorAtclinics []DTO.DoctorAtclinicsDTO
+	if err := cursor.All(ctx, &doctorAtclinics); err != nil {
+		return nil, err
+	}
+
+	return doctorAtclinics, nil
+
+}
+
+func (r *Repo) FetchAppointments(ctx context.Context, groupingID string, filter bson.M) ([]sharedModels.Appointments, error) {
+
+	//this is by which documents will be grouped in mongo pipeline
+	groupBy := "$" + groupingID
+
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: groupBy},
+			{Key: "totalAppointments", Value: bson.D{{Key: "$sum", Value: 1}}},
+			{Key: "appointments", Value: bson.D{
+				{Key: "$push", Value: bson.D{
+					{Key: "doctorName", Value: "$doctorName"},
+					{Key: "patientName", Value: "$patientName"},
+					{Key: "patientMobile", Value: "$patientMobile"},
+					{Key: "userName", Value: "$userName"},
+					{Key: "patientAddress", Value: "$patientAddress"},
+					{Key: "status", Value: "$status"},
+					{Key: "registrationDate", Value: "$registrationDate"},
+					{Key: "appointmentDate", Value: "$appointmentDate"},
+					{Key: "clinicName", Value: "$clinicName"},
+					{Key: "slot", Value: "$slot"},
+				}}}},
+		}}},
+	}
+
+	cursor, err := r.DB.Collection("Appointment").Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+
+	defer cursor.Close(ctx)
+
+	var appointments []sharedModels.Appointments
+	if err := cursor.All(ctx, &appointments); err != nil {
+		return nil, err
+	}
+
+	return appointments, nil
+
 }

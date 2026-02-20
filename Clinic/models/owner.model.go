@@ -18,7 +18,7 @@ type Owner struct {
 	Email            string             `json:"email,omitempty" bson:"email"`                      // 16 bytes
 	Gender           string             `json:"gender,omitempty" bson:"gender"`                    // 16 bytes
 	Clinic           primitive.ObjectID `json:"clinic,omitempty" bson:"clinic"`                    // 8 bytes (pointer)
-	ID               primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	ID               primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Role             string             `json:"role,omitempty" bson:"role"` // 12 bytes (placed near end)
 	Mobile           int64              `json:"mobile,omitempty" bson:"mobile"`
 	ClinicDetails    *Clinic            `json:"clinicDetails,omitempty" bson:"clinicDetails"` // 8 bytes

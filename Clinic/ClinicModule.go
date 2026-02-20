@@ -3,48 +3,56 @@
 package clinic
 
 import (
-	controller "AlShifa/Clinic/Controller"
-	repository "AlShifa/Clinic/Repository"
-	service "AlShifa/Clinic/Service"
-	validators "AlShifa/Clinic/Validators"
-	"AlShifa/Clinic/models"
 	emailnotifier "AlShifa/EmailNotifier"
-	internals "AlShifa/Internals"
-	middleware "AlShifa/Middleware"
 	redispack "AlShifa/RedisPack"
-	utils "AlShifa/Utils"
+	controller "AlShifa/clinic/Controller"
+	repository "AlShifa/clinic/Repository"
+	service "AlShifa/clinic/Service"
+	validators "AlShifa/clinic/Validators"
+	"AlShifa/clinic/models"
+	constants "AlShifa/constants"
+	internals "AlShifa/internals"
+	middleware "AlShifa/middleware"
+	utils "AlShifa/utils"
 	"fmt"
 	"log"
 	"net/http"
 )
 
-func InitialiseClinicModule(app *internals.App) {
+func InitialiseclinicModule(app *internals.App) {
 	//initialize redis module as we need it
 
 	repository := repository.NewRepository(app.DB)
 
 	//now arrange some dependencies for clinic service like cache ,otp generator
-	addDoctorToClinicCache := redispack.NewRedisCache[string, models.AddDoctorOtpPayload](app.Redis, "AddDoctorToClinicCache")
+	addDoctorToclinicCache := redispack.NewRedisCache[string, models.AddDoctorOtpPayload](app.Redis, "AddDoctorToclinicCache")
 	emailNotifier, smtpErr := emailnotifier.NewEmailService()
 	if smtpErr != nil {
 		log.Fatal("failed to get email service for clinic module", smtpErr)
 	}
 
-	service := service.NewClinicService(repository, app.DB.Client(), emailNotifier, utils.GenerateOTP, addDoctorToClinicCache)
-	controller := controller.NewController(service, validators.ValidateAddDoctorToClinicDetails)
+	service := service.NewclinicService(repository, app.DB.Client(), emailNotifier, utils.GenerateOTP, addDoctorToclinicCache)
+
+	//add this service to di container so that other modules can use it
+	app.DI.AddService(constants.NameClinicService, service)
+
+	controller := controller.NewController(service, validators.ValidateAddDoctorToclinicDetails)
 	app.Server.HandleFunc(utils.MakeURL("POST", "/owner/register"), controller.RegisterOwner)
-	app.Server.HandleFunc(utils.MakeURL("POST", "/clinic/register"), middleware.JwtAuthMiddleware(middleware.RoleGuardMiddleware(controller.RegisterClinic, utils.RoleClinicOwner)))
-	app.Server.HandleFunc(utils.MakeURL("GET", "/clinic/details"), controller.SearchClinic)
-	app.Server.HandleFunc(utils.MakeURL("GET", "/owner/details"), middleware.JwtAuthMiddleware(middleware.RoleGuardMiddleware(controller.SearchOwner, utils.RoleAdmin, utils.RoleClinicOwner)))
-	app.Server.HandleFunc(utils.MakeURL("POST", "/doctor/register"), middleware.JwtAuthMiddleware(middleware.RoleGuardMiddleware(controller.RegisterDoctor, utils.RoleClinicOwner)))
+	app.Server.HandleFunc(utils.MakeURL("POST", "/clinic/register"), middleware.JwtAuthmiddleware(middleware.RoleGuardmiddleware(controller.Registerclinic, utils.RoleclinicOwner)))
+	app.Server.HandleFunc(utils.MakeURL("GET", "/clinic/details"), controller.Searchclinic)
+	app.Server.HandleFunc(utils.MakeURL("GET", "/clinic/doctorAtclinics"), middleware.JwtAuthmiddleware(controller.FetchDoctorWithItsclinics))
+	app.Server.HandleFunc(utils.MakeURL("GET", "/owner/details"), middleware.JwtAuthmiddleware(middleware.RoleGuardmiddleware(controller.SearchOwner, utils.RoleAdmin, utils.RoleclinicOwner)))
+	app.Server.HandleFunc(utils.MakeURL("POST", "/doctor/register"), middleware.JwtAuthmiddleware(middleware.RoleGuardmiddleware(controller.RegisterDoctor, utils.RoleclinicOwner)))
 	app.Server.HandleFunc(utils.MakeURL("GET", "/doctor/details"), controller.SearchDoctor)
-	app.Server.HandleFunc(utils.MakeURL("POST", "/owner/login"), controller.LoginClinicOwner)
-	app.Server.HandleFunc(utils.MakeURL("POST", "/clinic/addDoctor"), middleware.JwtAuthMiddleware(middleware.RoleGuardMiddleware(controller.AddDoctorToClinic, utils.RoleClinicOwner)))
-	app.Server.HandleFunc(utils.MakeURL("POST", "/clinic/appointments/book"), middleware.JwtAuthMiddleware(controller.AddAppointment))
-	app.Server.HandleFunc(utils.MakeURL("POST", "/clinic/addDoctor/verify"), middleware.JwtAuthMiddleware(middleware.RoleGuardMiddleware(controller.VerifyAddDoctorToClinicOtp, utils.RoleClinicOwner)))
+	app.Server.HandleFunc(utils.MakeURL("POST", "/owner/login"), controller.LoginclinicOwner)
+	app.Server.HandleFunc(utils.MakeURL("POST", "/clinic/addDoctor"), middleware.JwtAuthmiddleware(middleware.RoleGuardmiddleware(controller.AddDoctorToclinic, utils.RoleclinicOwner)))
+	app.Server.HandleFunc(utils.MakeURL("POST", "/clinic/appointments/book"), middleware.JwtAuthmiddleware(controller.AddAppointment))
+	app.Server.HandleFunc(utils.MakeURL("POST", "/clinic/addDoctor/verify"), middleware.JwtAuthmiddleware(middleware.RoleGuardmiddleware(controller.VerifyAddDoctorToclinicOtp, utils.RoleclinicOwner)))
 	app.Server.HandleFunc(utils.MakeURL("POST", "/doctor/login"), controller.LoginDoctor)
-	app.Server.HandleFunc(utils.MakeURL("GET", "/clinic/appointments/full"), middleware.JwtAuthMiddleware(controller.AppointmentSlotsBooked))
+	app.Server.HandleFunc(utils.MakeURL("GET", "/clinic/appointments/full"), middleware.JwtAuthmiddleware(controller.AppointmentSlotsBooked))
 	app.Server.HandleFunc(utils.MakeURL("GET", "/healthcheck"), func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(w, "Hey buddy server is working for client module")
 	})
+
+	fmt.Println("Clinic module initialized")
 }

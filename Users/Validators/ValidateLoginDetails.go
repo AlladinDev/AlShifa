@@ -2,8 +2,8 @@
 package validators
 
 import (
-	structs "AlShifa/Users/Structs"
-	utils "AlShifa/Utils"
+	structs "AlShifa/users/structs"
+	utils "AlShifa/utils"
 	"unicode"
 )
 
@@ -16,9 +16,9 @@ func ValidateLoginDetails(l *structs.LoginDetails) map[string]string {
 
 	errors := make(map[string]string)
 
-	//mobile validation
-	if l.Mobile < 4000000000 {
-		errors["mobile"] = "Valid 10 digit mobile number required"
+	//email validation
+	if l.Email == "" {
+		errors["email"] = "Valid email address required"
 	}
 
 	// ---------- Password ----------

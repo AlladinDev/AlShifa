@@ -1,7 +1,7 @@
 package emailnotifier
 
 import (
-	utils "AlShifa/Utils"
+	utils "AlShifa/utils"
 	"os"
 	"testing"
 )

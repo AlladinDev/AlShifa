@@ -8,5 +8,5 @@ import (
 type AddDoctorOtpPayload struct {
 	OTP           string             `json:"otp" bson:"otp"`
 	Expiry        time.Time          `json:"expiry" bson:"expiry"`
-	ClinicDetails *AddDoctorToClinic `json:"clinicDetails"`
+	ClinicDetails *AddDoctorToclinic `json:"clinicDetails"`
 }
