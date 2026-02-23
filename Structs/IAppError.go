@@ -11,5 +11,8 @@ type IAppError struct {
 }
 
 func (appError *IAppError) Error() string {
+	if appError == nil {
+		return "Unknown error occurred"
+	}
 	return appError.Message
 }

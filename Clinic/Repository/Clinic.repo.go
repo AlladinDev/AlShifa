@@ -154,7 +154,6 @@ func (r *Repo) GetOwnerDetails(ctx context.Context, filter bson.M) ([]models.Own
 }
 
 func (r *Repo) Searchclinic(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
-	fmt.Println("hey buddy")
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: filter}},
 
@@ -172,7 +171,7 @@ func (r *Repo) Searchclinic(ctx context.Context, filter bson.M) ([]models.Clinic
 
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
-				{Key: "from", Value: "clinic"},
+				{Key: "from", Value: "Clinic"},
 				{Key: "localField", Value: "clinicID"},
 				{Key: "foreignField", Value: "_id"},
 				{Key: "as", Value: "clinicDetails"},
@@ -211,7 +210,7 @@ func (r *Repo) Searchclinic(ctx context.Context, filter bson.M) ([]models.Clinic
 		},
 	}
 
-	cursor, err := r.DB.Collection("clinicDoctor").Aggregate(ctx, pipeline)
+	cursor, err := r.DB.Collection("ClinicDoctor").Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -231,46 +230,16 @@ func (r *Repo) RegisterDoctor(ctx context.Context, doctorDetails models.Doctor) 
 }
 
 func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, error) {
-	pipeline := mongo.Pipeline{
-		bson.D{
-			{Key: "$match", Value: filter},
-		},
 
-		bson.D{{Key: "$unwind", Value: bson.D{
-			{Key: "path", Value: "$clinics"},
-		}}},
-
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "clinic"},
-			{Key: "localField", Value: "clinics.clinic"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "clinics.information"},
-		}}},
-
-		bson.D{{Key: "$unwind", Value: bson.D{
-			{Key: "path", Value: "$clinics.information"},
-		}}},
-
-		bson.D{{Key: "$group", Value: bson.D{
-			{Key: "_id", Value: "$_id"},
-			{Key: "name", Value: bson.D{{Key: "$first", Value: "$name"}}},
-			{Key: "qualifications", Value: bson.D{{Key: "$first", Value: "$qualifications"}}},
-			{Key: "workingAt", Value: bson.D{{Key: "$first", Value: "$workingAt"}}},
-			{Key: "clinics", Value: bson.D{{Key: "$push", Value: "$clinics"}}},
-		}}},
-	}
-
-	cursor, err := r.DB.Collection("Doctor").Aggregate(ctx, pipeline)
+	res, err := r.DB.Collection("Doctor").Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
 
 	var doctors []models.DoctorPublicDetails
-	if err := cursor.All(ctx, &doctors); err != nil {
+	if err := res.All(ctx, &doctors); err != nil {
 		return nil, err
 	}
-
 	return doctors, nil
 }
 
@@ -283,7 +252,7 @@ func (r *Repo) SearchDoctor(ctx context.Context, filter bson.M) (models.Doctor, 
 }
 
 func (r *Repo) AddDoctorToclinic(ctx context.Context, clinicDetails models.AddDoctorToclinic) error {
-	_, err := r.DB.Collection("clinicDoctor").InsertOne(ctx, clinicDetails)
+	_, err := r.DB.Collection("ClinicDoctor").InsertOne(ctx, clinicDetails)
 	return err
 }
 

@@ -2,13 +2,18 @@ package utils
 
 import (
 	"fmt"
-	"maps"
+
 	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+func sanitizeRegexPattern(pattern string) string {
+	return regexp.QuoteMeta(pattern)
+}
 func TransformParamIDS(params url.Values, dest map[string]any) map[string]any {
 	queryValues := make(map[string]any)
 
@@ -35,7 +40,17 @@ func TransformParamIDS(params url.Values, dest map[string]any) map[string]any {
 	}
 	//if user passes dest then copy them to that dest for convenince
 	if dest != nil {
-		maps.Copy(dest, queryValues)
+		for k, v := range queryValues {
+			//dont add regex for date fields
+			if strings.Contains(k, "Date") || strings.Contains(k, "date") {
+				if t, ok := v.(time.Time); ok {
+					dest[k] = t
+					continue
+				}
+			}
+			value := fmt.Sprintf("%v", v)
+			dest[k] = primitive.Regex{Pattern: sanitizeRegexPattern(value), Options: "i"}
+		}
 	}
 	//also return them
 	return queryValues

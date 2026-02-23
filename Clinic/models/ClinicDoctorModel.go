@@ -23,16 +23,9 @@ type DoctorDetails struct {
 }
 
 // clinicDoctor is a combining model for clinic and doctor relationship it will allow flexibility to add more fields without need to modify clinic or doctor documents
+//using aggregation pipeline we can inject clinic details and doctor details into this collection and it will be easy to query for doctors of a clinic or clinics of a doctor without need to do multiple queries
+//repository will just send clinicDetails and doctorDetails as per this model
 type ClinicDoctor struct {
-	ID            primitive.ObjectID `json:"_id" bson:"_id"`
-	ClinicDetails Clinic             `json:"clinicDetails" bson:"clinicDetails"`
-	ClinicID      primitive.ObjectID `json:"clinicID" bson:"clinicID"`
-	DoctorID      primitive.ObjectID `json:"doctorID" bson:"doctorID"`
-	Doctors       []DoctorDetails    `json:"doctors"  bson:"doctors"`
-	StartTime     time.Time          `json:"startTime"`
-	EndTime       time.Time          `json:"endTime"`
-	CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
-	DoctorName    string             `json:"doctorName" bson:"doctorName"`
-	ClinicName    string             `json:"clinicName" bson:"clinicName"`
-	ClinicAddress string             `json:"clinicAddress" bson:"clinicAddress"`
+	ClinicDetails Clinic          `json:"clinicDetails" bson:"clinicDetails"`
+	Doctors       []DoctorDetails `json:"doctors"  bson:"doctors"`
 }

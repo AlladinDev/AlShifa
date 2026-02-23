@@ -4,6 +4,7 @@ import (
 	"AlShifa/clinic/models"
 	middleware "AlShifa/middleware"
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -81,6 +82,7 @@ func ValidateAppointmentDetails(appointmentDetails *models.Appointment, ctx cont
 	if appointmentDetails.Clinic == primitive.NilObjectID {
 		errors["clinic"] = "clinic ID is not a valid MongoDB ObjectID"
 	} else {
+		fmt.Println("Clinic ID is valid:", id)
 		appointmentDetails.Clinic = id
 	}
 

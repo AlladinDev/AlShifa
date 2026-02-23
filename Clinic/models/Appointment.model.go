@@ -16,7 +16,7 @@ type Appointment struct {
 	PatientAddress string `json:"patientAddress" bson:"patientAddress"`
 	Status         string `json:"status" bson:"status"`
 	DoctorName     string `json:"doctorName" bson:"doctorName"`
-	ClinicName     string `json:"clinicName" bson:"doctorName"`
+	ClinicName     string `json:"clinicName" bson:"clinicName"`
 
 	// 12 bytes each
 	ID     primitive.ObjectID `json:"id" bson:"_id"`

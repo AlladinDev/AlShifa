@@ -294,7 +294,7 @@ func (service *clinicService) RegisterclinicOwner(ctx context.Context, ownerDeta
 }
 
 func (service *clinicService) Searchclinic(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, *structs.IAppError) {
-	fmt.Print("hey ")
+
 	clinics, err := service.Repo.Searchclinic(ctx, filter)
 	if err != nil {
 		return nil, utils.ReturnAppError(err, 500, "Unable To Fetch clinic details", err.Error())
@@ -415,19 +415,15 @@ func (service *clinicService) AddAppointment(ctx context.Context, appointmentDet
 	//here check whether this doctorid and clinicid exists or not  and userid will be injected by jwt middleware
 
 	//now do the searches
-	doctors, err := service.SearchDoctor(ctx, bson.M{"_id": appointmentDetails.Doctor})
+	doctor, err := service.Repo.SearchDoctor(ctx, bson.M{"_id": appointmentDetails.Doctor})
 	if err != nil {
 		return 0, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to add appoinment", err.Error())
-	}
-
-	if len(doctors) == 0 {
-		return 0, utils.ReturnAppError(errors.New("no doctor exists with this id"), http.StatusInternalServerError, "Failed to add appoinment", "no doctor exists with this id")
 	}
 
 	//now search for this clinic
-	clinics, err := service.Searchclinic(ctx, bson.M{"_id": appointmentDetails.Clinic})
-	if err != nil {
-		return 0, utils.ReturnAppError(err, http.StatusInternalServerError, "Failed to add appoinment", err.Error())
+	clinics, clinicSearchErr := service.Searchclinic(ctx, bson.M{"clinicID": appointmentDetails.Clinic})
+	if clinicSearchErr != nil {
+		return 0, utils.ReturnAppError(clinicSearchErr, http.StatusInternalServerError, "Failed to add appoinment", clinicSearchErr.Error())
 	}
 
 	if len(clinics) == 0 {
@@ -436,8 +432,6 @@ func (service *clinicService) AddAppointment(ctx context.Context, appointmentDet
 
 	//get the first clinic
 	clinic := clinics[0]
-
-	doctor := doctors[0]
 
 	//here check using clinicDoctor whether this doctor is onboarded to this clinic or not
 	_, clinicsDetailsErr := service.Repo.Searchclinic(ctx, bson.M{"ClinicID": appointmentDetails.Clinic, "doctorID": doctor.ID})
@@ -449,6 +443,9 @@ func (service *clinicService) AddAppointment(ctx context.Context, appointmentDet
 	//now add some defaults like status date
 	appointmentDetails.RegistrationDate = time.Now()
 	appointmentDetails.Status = "pending"
+	appointmentDetails.DoctorName = doctor.Name
+
+	appointmentDetails.ClinicName = clinic.ClinicDetails.Name
 	appointmentDetails.ID = primitive.NewObjectID()
 
 	slotNumber, appointmentErr := service.Repo.AddAppointment(ctx, clinic.ClinicDetails.MaxAppointments, appointmentDetails)

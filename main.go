@@ -39,6 +39,12 @@ func printMemUsage() (string, error) {
 
 func main() {
 
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("App panicked with error %v", err)
+		}
+	}()
+
 	printMemUsage()
 
 	log.Printf("App running mode:  APP_ENV is = '%s'\n", os.Getenv("APP_ENV"))
