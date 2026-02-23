@@ -21,6 +21,6 @@ func NewUserClinicContract(service interfaces.IUserClinicContract) *UserClinicCo
 
 var _ = interfaces.IUserClinicContract(nil)
 
-func (c *UserClinicContract) FetchAppointments(ctx context.Context, groupingID string, filter bson.M) ([]models.Appointment, *structs.IAppError) {
+func (c *UserClinicContract) FetchAppointments(ctx context.Context, groupingID string, filter bson.M) ([]models.Appointments, *structs.IAppError) {
 	return c.clinicService.FetchAppointments(ctx, groupingID, filter)
 }
