@@ -3,16 +3,16 @@
 package clinic
 
 import (
-	emailnotifier "AlShifa/EmailNotifier"
-	redispack "AlShifa/RedisPack"
-	controller "AlShifa/clinic/Controller"
-	repository "AlShifa/clinic/Repository"
-	service "AlShifa/clinic/Service"
-	validators "AlShifa/clinic/Validators"
+	controller "AlShifa/clinic/controller"
 	"AlShifa/clinic/models"
+	repository "AlShifa/clinic/repository"
+	service "AlShifa/clinic/service"
+	validators "AlShifa/clinic/validators"
 	constants "AlShifa/constants"
+	emailnotifier "AlShifa/emailNotifier"
 	internals "AlShifa/internals"
 	middleware "AlShifa/middleware"
+	redispack "AlShifa/redisPack"
 	utils "AlShifa/utils"
 	"fmt"
 	"log"

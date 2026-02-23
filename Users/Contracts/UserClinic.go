@@ -2,9 +2,9 @@
 package contracts
 
 import (
+	"AlShifa/models"
 	"AlShifa/structs"
 	"AlShifa/users/interfaces"
-	"AlShifa/users/models"
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
 )

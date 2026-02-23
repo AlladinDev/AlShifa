@@ -1,8 +1,8 @@
 package service
 
 import (
-	interfaces "AlShifa/clinic/Interfaces"
 	DTO "AlShifa/clinic/dtos"
+	interfaces "AlShifa/clinic/interfaces"
 	"AlShifa/clinic/models"
 	"context"
 	"log"

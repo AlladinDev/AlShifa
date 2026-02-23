@@ -5,10 +5,10 @@ import (
 	constants "AlShifa/constants"
 	internals "AlShifa/internals"
 	middleware "AlShifa/middleware"
-	controller "AlShifa/users/Controller"
-	repository "AlShifa/users/Repository"
-	service "AlShifa/users/Service"
+	controller "AlShifa/users/controller"
 	interfaces "AlShifa/users/interfaces"
+	repository "AlShifa/users/repository"
+	service "AlShifa/users/service"
 	utils "AlShifa/utils"
 )
 

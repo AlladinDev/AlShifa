@@ -16,7 +16,7 @@ type MockUserService struct {
 	LoginUserFn         func(ctx context.Context, email string, password string) (string, *structs.IAppError)
 	SearchUserFn        func(ctx context.Context, filter bson.M) (*models.User, *structs.IAppError)
 	SearchUserByIDFn    func(ctx context.Context, userID primitive.ObjectID) (*models.User, *structs.IAppError)
-	FetchAppointmentsFn func(ctx context.Context, groupingID string, filter bson.M) ([]sharedModels.Appointments, *structs.IAppError)
+	FetchAppointmentsFn func(ctx context.Context, groupingID string, filter bson.M) ([]sharedModels.Appointment, *structs.IAppError)
 }
 
 var _ interfaces.IService = (*MockUserService)(nil)
@@ -28,7 +28,7 @@ func (m *MockUserService) AddUser(ctx context.Context, user models.User) *struct
 	return nil
 }
 
-func (m *MockUserService) FetchAppointments(ctx context.Context, groupingID string, filter bson.M) ([]sharedModels.Appointments, *structs.IAppError) {
+func (m *MockUserService) FetchAppointments(ctx context.Context, groupingID string, filter bson.M) ([]sharedModels.Appointment, *structs.IAppError) {
 	if m.FetchAppointmentsFn != nil {
 		return m.FetchAppointmentsFn(ctx, groupingID, filter)
 	}

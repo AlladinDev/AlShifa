@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 
-	interfaces "AlShifa/clinic/Interfaces"
+	interfaces "AlShifa/clinic/interfaces"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

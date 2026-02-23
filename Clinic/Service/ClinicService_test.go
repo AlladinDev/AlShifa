@@ -1,8 +1,8 @@
 package service
 
 import (
-	appInterfaces "AlShifa/Interfaces"
 	"AlShifa/clinic/models"
+	appInterfaces "AlShifa/interfaces"
 	structs "AlShifa/structs"
 	"context"
 	"errors"

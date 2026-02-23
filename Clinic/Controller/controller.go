@@ -2,9 +2,9 @@
 package controller
 
 import (
-	interfaces "AlShifa/clinic/Interfaces"
-	validators "AlShifa/clinic/Validators"
+	interfaces "AlShifa/clinic/interfaces"
 	"AlShifa/clinic/models"
+	validators "AlShifa/clinic/validators"
 	middleware "AlShifa/middleware"
 	structs "AlShifa/structs"
 	utils "AlShifa/utils"

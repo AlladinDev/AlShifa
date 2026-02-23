@@ -123,13 +123,13 @@ func TestUserLogin(t *testing.T) {
 			Usecase:            "User Login failure for invalid json",
 			ExpectedStatusCode: http.StatusBadRequest,
 			mockService: &MockUserService{
-				LoginUserFn: func(ctx context.Context, mobile int, password string) (string, *structs.IAppError) {
+				LoginUserFn: func(ctx context.Context, email string, password string) (string, *structs.IAppError) {
 					return "Logged in", nil
 				},
 			},
 			loginDetails: `{
-	        mobile":9797798243,
-	        "password:"Saqlain@123"
+	        "email":"Saqlain@gmail.com",
+	        "password":"Saqlain@123"
 	       }`,
 		},
 		{
@@ -137,7 +137,7 @@ func TestUserLogin(t *testing.T) {
 			Usecase:            "user login successfull when everything is ok",
 			ExpectedStatusCode: http.StatusOK,
 			mockService: &MockUserService{
-				LoginUserFn: func(ctx context.Context, mobile int, password string) (string, *structs.IAppError) {
+				LoginUserFn: func(ctx context.Context, email string, password string) (string, *structs.IAppError) {
 					return "Logged in", nil
 				},
 			},
@@ -148,7 +148,7 @@ func TestUserLogin(t *testing.T) {
 			Usecase:            "user login failure when mock service returns error",
 			ExpectedStatusCode: http.StatusInternalServerError,
 			mockService: &MockUserService{
-				LoginUserFn: func(ctx context.Context, mobile int, password string) (string, *structs.IAppError) {
+				LoginUserFn: func(ctx context.Context, email string, password string) (string, *structs.IAppError) {
 					return "", &structs.IAppError{
 						Message:    "Error from mock service layer",
 						StatusCode: http.StatusInternalServerError,
@@ -186,10 +186,10 @@ func ReturnDummyUser() models.User {
 
 		Mobile: 9797798243,
 
-		ID:             primitive.NewObjectID(),
-		AppointmentIDS: nil,
-		Appointments:   nil,
-		Role:           "User",
+		ID: primitive.NewObjectID(),
+
+		Appointments: nil,
+		Role:         "User",
 	}
 
 }

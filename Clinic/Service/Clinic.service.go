@@ -2,10 +2,10 @@
 package service
 
 import (
-	appInterfaces "AlShifa/Interfaces"
-	interfaces "AlShifa/clinic/Interfaces"
 	DTO "AlShifa/clinic/dtos"
+	interfaces "AlShifa/clinic/interfaces"
 	"AlShifa/clinic/models"
+	appInterfaces "AlShifa/interfaces"
 	sharedModels "AlShifa/models"
 	structs "AlShifa/structs"
 	utils "AlShifa/utils"
