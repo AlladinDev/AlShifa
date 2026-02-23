@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Appointment struct {
+type appointment struct {
 	// 24 bytes each
 	AppointmentDate  time.Time `json:"appointmentDate" bson:"appointmentDate"`
 	RegistrationDate time.Time `json:"registrationDate" bson:"registrationDate"`
@@ -34,5 +34,5 @@ type Appointment struct {
 
 type Appointments struct {
 	TotalAppointments int           `json:"totalAppointments" bson:"totalAppointments"`
-	Appointment       []Appointment `json:"appointments" bson:"appointments"`
+	Appointment       []appointment `json:"appointments" bson:"appointments"`
 }

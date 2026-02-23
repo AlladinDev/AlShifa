@@ -9,7 +9,6 @@ import (
 	userModuleStructs "AlShifa/users/structs"
 	validators "AlShifa/users/validators"
 	utils "AlShifa/utils"
-	"fmt"
 
 	"context"
 	"encoding/json"
@@ -151,7 +150,6 @@ func (controller *UserController) FetchAppointments(res http.ResponseWriter, req
 	defer cancel()
 	//first get the userid it will be default filter so that user can see only his appointments and not of anyone else
 	userIDAny := req.Context().Value(middleware.ContextUserIDKey)
-	fmt.Println("inside controller", userIDAny)
 
 	userMongoDBErr, userMongoDBID := utils.ParseUserID(userIDAny)
 	if userMongoDBErr != nil {
@@ -170,9 +168,6 @@ func (controller *UserController) FetchAppointments(res http.ResponseWriter, req
 	//add the userid in filter
 	filter["user"] = userMongoDBID
 	utils.TransformParamIDS(params, filter)
-	for key, value := range filter {
-		fmt.Println(key, value)
-	}
 
 	appointments, err := controller.Service.FetchAppointments(ctx, "user", filter)
 	if err != nil {

@@ -8,5 +8,5 @@ import (
 )
 
 type IUserClinicContract interface {
-	FetchAppointments(ctx context.Context, groupBy string, filter bson.M) ([]sharedModels.Appointment, *structs.IAppError)
+	FetchAppointments(ctx context.Context, groupBy string, filter bson.M) ([]sharedModels.Appointments, *structs.IAppError)
 }

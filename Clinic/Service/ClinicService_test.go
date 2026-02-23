@@ -55,9 +55,7 @@ func TestAddDoctorToclinicOTPGenerationFn(t *testing.T) {
 			mockRepoFn: &MockRepo{
 				SearchclinicMockFn: func(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
 					return []models.ClinicDoctor{
-						{
-							ID: ReturnNewObjectID("AlMedrid clinic"),
-						},
+						{},
 					}, nil
 				},
 				SearchDoctorMockFn: func(ctx context.Context, filter bson.M) (models.Doctor, error) {
@@ -109,9 +107,7 @@ func TestAddDoctorToclinicOTPGenerationFn(t *testing.T) {
 			mockRepoFn: &MockRepo{
 				SearchclinicMockFn: func(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
 					return []models.ClinicDoctor{
-						{
-							ID: ReturnNewObjectID("Alchem clinic"),
-						},
+						{},
 					}, nil
 				},
 				SearchDoctorMockFn: func(ctx context.Context, filter bson.M) (models.Doctor, error) {

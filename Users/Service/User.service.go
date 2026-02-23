@@ -85,7 +85,7 @@ func (s *Service) AddUser(ctx context.Context, user models.User) *structs.IAppEr
 	return nil
 }
 
-func (s *Service) FetchAppointments(ctx context.Context, groupBy string, filter bson.M) ([]sharedModels.Appointment, *structs.IAppError) {
+func (s *Service) FetchAppointments(ctx context.Context, groupBy string, filter bson.M) ([]sharedModels.Appointments, *structs.IAppError) {
 	return s.userClinicContract.FetchAppointments(ctx, groupBy, filter)
 }
 
