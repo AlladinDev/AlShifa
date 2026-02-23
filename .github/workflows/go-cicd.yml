@@ -20,8 +20,9 @@ jobs:
       - name: Load env vars from secret
         run: echo "${{ secrets.ENV_FILE }}" >> $GITHUB_ENV
 
-      - name: Download dependencies
-        run: go mod download
+
+      - name: Clean Go cache
+        run: go clean -cache -modcache -i -r
 
     
 
