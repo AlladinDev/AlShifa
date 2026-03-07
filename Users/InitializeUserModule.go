@@ -4,12 +4,12 @@ package users
 import (
 	constants "AlShifa/constants"
 	internals "AlShifa/internals"
-	middleware "AlShifa/middleware"
+	"AlShifa/middleware"
 	controller "AlShifa/users/controller"
-	interfaces "AlShifa/users/interfaces"
 	repository "AlShifa/users/repository"
 	service "AlShifa/users/service"
-	utils "AlShifa/utils"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func InitialiseUserModule(app *internals.App) {
@@ -22,19 +22,12 @@ func InitialiseUserModule(app *internals.App) {
 		panic("ClinicService required in usermodule not found in di")
 	}
 
-	clinicService, ok := clinicServiceAny.(interfaces.IUserClinicContract)
-	if !ok {
-		panic("interface clinicservice conversion failed in user module")
-	}
-
-	service := service.ReturnNewService(repository, clinicService)
-
-	router := app.Server
+	service := service.ReturnNewService(repository)
 
 	controller := controller.ReturnNewController(service)
-	router.HandleFunc(utils.MakeURL("POST", "/user/register"), controller.RegisterUser)
-	router.HandleFunc(utils.MakeURL("POST", "/user/login"), controller.LoginUser)
-	router.HandleFunc(utils.MakeURL("GET", "/user/appointments"), middleware.JwtAuthmiddleware(middleware.RoleGuardmiddleware(controller.FetchAppointments, utils.RoleUser)))
+	app.Route("/user", func(r chi.Router) {
+		r.With(middleware.JwtAuthmiddleware).Post("/", controller.RegisterUser)
+		r.With(middleware.JwtAuthmiddleware).Get("/details", controller.SearchUser)
+	})
 
-	app.Server.HandleFunc(utils.MakeURL("GET", "/user/details"), middleware.JwtAuthmiddleware(middleware.RoleGuardmiddleware(controller.SearchUser, utils.RoleUser)))
 }

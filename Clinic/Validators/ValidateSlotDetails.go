@@ -1,3 +1,4 @@
+// Package validators provides validators for clinic module
 package validators
 
 import (

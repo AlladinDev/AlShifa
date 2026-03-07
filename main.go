@@ -1,62 +1,48 @@
 package main
 
 import (
+	"AlShifa/appointment"
 	clinic "AlShifa/clinic"
+	constants "AlShifa/constants"
 	internals "AlShifa/internals"
-	middleware "AlShifa/middleware"
+	alShifaMiddlewares "AlShifa/middleware"
+	"AlShifa/owner"
 	users "AlShifa/users"
 	utils "AlShifa/utils"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"runtime"
+
+	chiMiddlewares "github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func printMemUsage() (string, error) {
-	var m runtime.MemStats
-
-	runtime.ReadMemStats(&m)
-
-	fmt.Printf("Alloc = %v MB\n", m.Alloc/1024/1024)
-	fmt.Printf("TotalAlloc = %v MB\n", m.TotalAlloc/1024/1024)
-	fmt.Printf("Sys = %v MB\n", m.Sys/1024/1024)
-	fmt.Printf("NumGC = %v\n", m.NumGC)
-
-	byteData, err := json.Marshal(&m)
-
-	if err != nil {
-		return "", err
-	}
-
-	return string(byteData), nil
-
-}
-
 func main() {
-
-	defer func() {
-		if err := recover(); err != nil {
-			log.Printf("App panicked with error %v", err)
-		}
-	}()
-
-	printMemUsage()
 
 	log.Printf("App running mode:  APP_ENV is = '%s'\n", os.Getenv("APP_ENV"))
 
 	utils.LoadEnvs(".env")
 
+	//get the port
 	port := os.Getenv("PORT")
 
 	if port == "" {
 		port = "8000"
 	}
 	addr := ":" + port
+
+	//create chi router
+	chiRouter := chi.NewRouter()
+
+	//--------------------apply middlewares----------------
+	//timeout middewares
+	chiRouter.Use(chiMiddlewares.Timeout(constants.RequestTimeout))
+	chiRouter.Use(alShifaMiddlewares.Cors)
+	chiRouter.Use(chiMiddlewares.Recoverer)
 
 	//call monogodb connect function
 	mongoClient, mongoErr := internals.ConnectMongo(os.Getenv("MONGODB_URL"))
@@ -105,7 +91,7 @@ func main() {
 		WithDB(mongoClient.Database("AlShifa")).
 		WithDI().
 		WithRedis(&redisInstance).
-		WithServer(http.NewServeMux())
+		WithServer(chiRouter)
 
 	//add central middlewares
 
@@ -113,26 +99,16 @@ func main() {
 	clinic.InitialiseclinicModule(appStore)
 
 	users.InitialiseUserModule(appStore)
+	owner.InitOwner(appStore)
+
+	appointment.InitAppointmentModule(appStore)
 
 	fmt.Println("Server Started with dependency injection system initialized")
-
-	appStore.Server.HandleFunc("GET /cpu/usage", func(w http.ResponseWriter, r *http.Request) {
-		cpuStatistics, err := printMemUsage()
-		if err != nil {
-			_ = utils.WriteResponse(w, http.StatusInternalServerError, "Failed to get cpu usage")
-			return
-		}
-
-		_ = utils.WriteResponse(w, http.StatusOK, cpuStatistics)
-	})
-
-	//add global middlewares here
-	guardedMux := middleware.Corsmiddleware(appStore.Server)
 
 	//print services registered in di for debugging
 	appStore.DI.PrintServicesInDI()
 
-	if err := http.ListenAndServe(addr, guardedMux); err != nil {
+	if err := http.ListenAndServe(addr, chiRouter); err != nil {
 		fmt.Print("Failed to start server on error is", err)
 	}
 

@@ -1,19 +1,21 @@
 package middleware
 
 import (
+	"AlShifa/constants"
 	utils "AlShifa/utils"
 	"net/http"
 	"slices"
 )
 
-func RoleGuardmiddleware(handler http.HandlerFunc, allowedRoles ...string) http.HandlerFunc {
+func RoleGuardmiddleware(allowedRoles ...string) http.HandlerFunc {
+
 	if len(allowedRoles) == 0 {
 		panic("At least one role must be specified for RoleGuardmiddleware")
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get user role from context
-		userRole := r.Context().Value(ContextUserRoleKey)
+		userRole := r.Context().Value(constants.KeyUserRole)
 
 		if userRole == nil {
 			_ = utils.WriteResponse(w, http.StatusBadRequest, utils.ReturnAppError(nil, 400, "Missing Role", "Missing Role"))
@@ -28,7 +30,7 @@ func RoleGuardmiddleware(handler http.HandlerFunc, allowedRoles ...string) http.
 
 		// Check if user role is allowed
 		if slices.Contains(allowedRoles, userRoleStr) {
-			handler(w, r)
+			//next.ServeHTTP(w, r)
 			return
 		}
 

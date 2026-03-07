@@ -1,3 +1,4 @@
+// Package models provides models for clinic
 package models
 
 import (
@@ -6,8 +7,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-//AddDoctorToclinic is the payload which clinic has to send when onboarding a doctor
-type AddDoctorToclinic struct {
+//ClinicDoctor is the payload which clinic has to send when onboarding a doctor this is a mapper between clinic and doctor
+type ClinicDoctor struct {
 	ClinicID      primitive.ObjectID `json:"clinicID" bson:"clinicID"`
 	DoctorID      primitive.ObjectID `json:"doctorID" bson:"doctorID"`
 	WorkingDays   []string           `json:"workingDays" bson:"workingDays"`

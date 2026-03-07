@@ -2,12 +2,13 @@
 package repository
 
 import (
-	DTO "AlShifa/clinic/dtos"
 	"AlShifa/clinic/models"
-	sharedModels "AlShifa/models"
+	"AlShifa/structs"
 	"context"
-	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
 
 	interfaces "AlShifa/clinic/interfaces"
 
@@ -52,11 +53,6 @@ func InitialiseIndexes(collection *mongo.Collection) error {
 	}
 
 	return nil
-}
-
-func (r *Repo) RegisterclinicOwner(ctx context.Context, owner models.Owner) error {
-	_, err := r.DB.Collection("Owner").InsertOne(ctx, owner)
-	return err
 }
 
 func (r *Repo) SearchclinicByID(ctx context.Context, clinicID primitive.ObjectID) (*models.Clinic, error) {
@@ -114,109 +110,15 @@ func (r *Repo) Registerclinic(
 	return err
 }
 
-func (r *Repo) GetOwnerDetails(ctx context.Context, filter bson.M) ([]models.Owner, error) {
-	pipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: filter}},
-		bson.D{
-			{Key: "$lookup", Value: bson.D{
-				{Key: "from", Value: "clinic"},
-				{Key: "localField", Value: "clinic"},
-				{Key: "foreignField", Value: "_id"},
-				{Key: "as", Value: "clinicDetails"},
-			}}},
-		bson.D{{Key: "$unwind", Value: bson.M{
-			"path":                       "$clinicDetails",
-			"preserveNullAndEmptyArrays": true,
-		}},
-		},
-		bson.D{
-			{Key: "$project", Value: bson.D{
-				{Key: "registrationDate", Value: 0},
-				{Key: "clinicDetails.registrationDate", Value: 0},
-				{Key: "clinicDetails.ownerDetails", Value: 0},
-				{Key: "clinicDetails.doctorDetails", Value: 0},
-			}},
-		},
-	}
-	cursor, err := r.DB.Collection("Owner").Aggregate(ctx, pipeline)
+func (r *Repo) Searchclinic(ctx context.Context, filter bson.M) ([]models.Clinic, error) {
+
+	cursor, err := r.DB.Collection("Clinic").Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	var owners []models.Owner
-
-	if err := cursor.All(ctx, &owners); err != nil {
-		return nil, err
-	}
-
-	return owners, nil
-}
-
-func (r *Repo) Searchclinic(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
-	pipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: filter}},
-
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Doctor"},
-			{Key: "localField", Value: "doctorID"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "doctorDetails"},
-		}}},
-
-		bson.D{
-			{Key: "$unwind", Value: bson.D{
-				{Key: "path", Value: "$doctorDetails"},
-			}}},
-
-		bson.D{
-			{Key: "$lookup", Value: bson.D{
-				{Key: "from", Value: "Clinic"},
-				{Key: "localField", Value: "clinicID"},
-				{Key: "foreignField", Value: "_id"},
-				{Key: "as", Value: "clinicDetails"},
-			}},
-		},
-
-		bson.D{
-			{Key: "$unwind", Value: bson.D{
-				{Key: "path", Value: "$clinicDetails"},
-			}},
-		},
-
-		bson.D{
-			{Key: "$project", Value: bson.D{
-				{Key: "doctorDetails.password", Value: 0},
-			}},
-		},
-
-		bson.D{
-			{Key: "$group", Value: bson.D{
-				{Key: "_id", Value: "$clinicID"},
-				{Key: "clinicDetails", Value: bson.D{
-					{Key: "$first", Value: "$clinicDetails"},
-				}},
-				{Key: "doctors", Value: bson.D{
-					{Key: "$push", Value: bson.D{
-						{Key: "$mergeObjects", Value: bson.A{
-							"$doctorDetails",
-							bson.D{{Key: "startTime", Value: "$startTime"}},
-							bson.D{{Key: "endTime", Value: "$endTime"}},
-							bson.D{{Key: "workingDays", Value: "$workingDays"}},
-						}},
-					}},
-				}},
-			}},
-		},
-	}
-
-	cursor, err := r.DB.Collection("ClinicDoctor").Aggregate(ctx, pipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var results []models.ClinicDoctor
+	var results []models.Clinic
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
@@ -224,233 +126,135 @@ func (r *Repo) Searchclinic(ctx context.Context, filter bson.M) ([]models.Clinic
 	return results, nil
 }
 
-func (r *Repo) RegisterDoctor(ctx context.Context, doctorDetails models.Doctor) error {
-	_, err := r.DB.Collection("Doctor").InsertOne(ctx, doctorDetails)
-	return err
-}
-
-func (r *Repo) SearchDoctors(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, error) {
+func (r *Repo) FetchDoctors(ctx context.Context, filter bson.M) ([]models.Doctor, error) {
 
 	res, err := r.DB.Collection("Doctor").Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 
-	var doctors []models.DoctorPublicDetails
+	var doctors []models.Doctor
 	if err := res.All(ctx, &doctors); err != nil {
 		return nil, err
 	}
 	return doctors, nil
 }
 
-//SearchDoctor searches for a single doctor based on the provided filter. it returns password and email fields so use it for internal apis like login only and not for public use
-func (r *Repo) SearchDoctor(ctx context.Context, filter bson.M) (models.Doctor, error) {
-	result := r.DB.Collection("Doctor").FindOne(ctx, filter)
-	var doctor models.Doctor
-	err := result.Decode(&doctor)
-	return doctor, err
-}
-
-func (r *Repo) AddDoctorToclinic(ctx context.Context, clinicDetails models.AddDoctorToclinic) error {
+func (r *Repo) AddDoctorToclinic(ctx context.Context, clinicDetails models.ClinicDoctor) error {
 	_, err := r.DB.Collection("ClinicDoctor").InsertOne(ctx, clinicDetails)
 	return err
 }
 
-func (r *Repo) AddAppointment(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (int, error) {
-	//here first update slot document using upsert to ensure if it is not present create it if present updates its slots booked by 1
-	session, err := r.DB.Client().StartSession()
+// FetchDoctorClinicMappings function clinic with its associated doctors using filters
+func (r *Repo) FetchDoctorClinicMappings(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
+
+	cursor, err := r.DB.Collection("clinicDoctor").Find(ctx, filter)
 	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var doctorClinicMapping []models.ClinicDoctor
+	if err := cursor.All(ctx, &doctorClinicMapping); err != nil {
+		return nil, err
+	}
+
+	return doctorClinicMapping, nil
+
+}
+
+//ClinicDoctorDetails function is for getting some details from clinic doctor mapping corresponding to clinicid and doctorid it returns some details but in primitive individual format
+func (r *Repo) ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDate time.Time) (error *structs.IAppError, doctorName string, clinicName string, clinicAddress string) {
+	//first check whether this clinic exists or not
+	clinicCheckingErr := r.DB.Collection("Clinic").FindOne(ctx, bson.M{"_id": clinicID}, options.FindOne().SetProjection(bson.M{"_id": 1})).Err()
+	if clinicCheckingErr != nil {
+		if clinicCheckingErr == mongo.ErrNoDocuments {
+			return &structs.IAppError{
+				Message:    "This Clinic Doesnt Exist",
+				Reason:     clinicCheckingErr.Error(),
+				StatusCode: http.StatusNotFound,
+			}, "", "", ""
+		}
+
+		return &structs.IAppError{
+			Message:    "Failed to check clinic existence",
+			Reason:     clinicCheckingErr.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}, "", "", ""
+	}
+
+	//now check if this doctor exists or not
+	doctorCheckingErr := r.DB.Collection("Doctor").FindOne(ctx, bson.M{"_id": clinicID}, options.FindOne().SetProjection(bson.M{"_id": 1})).Err()
+	if doctorCheckingErr != nil {
+		if doctorCheckingErr == mongo.ErrNoDocuments {
+			return &structs.IAppError{
+				Message:    "This Doctor Doesnt Exist",
+				Reason:     doctorCheckingErr.Error(),
+				StatusCode: http.StatusNotFound,
+			}, "", "", ""
+		}
+
+		return &structs.IAppError{
+			Message:    "Failed to check clinic existence",
+			Reason:     doctorCheckingErr.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}, "", "", ""
+	}
+
+	result := r.DB.Collection("ClinicDoctor").FindOne(ctx, bson.M{"clinicID": clinicID, "doctorID": doctorID})
+	var doctorClinicDetails models.ClinicDoctor
+	if err := result.Decode(&doctorClinicDetails); err != nil {
+		return &structs.IAppError{
+			Message:    "Failed to get doctor clinic details",
+			Reason:     err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}, "", "", ""
+	}
+
+	//now here check whether this appointmentDate actually is valid or not whether doctor is available on this date or not
+	requestedDateDay := appointmentDate.Weekday()
+	appointmentDatePossible := false
+	for _, day := range doctorClinicDetails.WorkingDays {
+		if strings.EqualFold(day, requestedDateDay.String()) {
+			appointmentDatePossible = true
+			break
+		}
+	}
+
+	if !appointmentDatePossible {
+		return &structs.IAppError{
+			Message:    "Doctor is not available on this date",
+			Reason:     "Doctor is not available on this date",
+			StatusCode: http.StatusBadRequest,
+		}, "", "", ""
+	}
+
+	return nil, doctorClinicDetails.DoctorName, doctorClinicDetails.ClinicName, doctorClinicDetails.ClinicAddress
+}
+
+func (r *Repo) RegisterDoctor(ctx context.Context, doctorDetails models.Doctor) error {
+	_, err := r.DB.Collection("Doctor").InsertOne(ctx, doctorDetails)
+	return err
+}
+
+func (r *Repo) ClinicExists(ctx context.Context, clinicID primitive.ObjectID) error {
+	return r.DB.Collection("Clinic").FindOne(ctx, bson.M{"_id": clinicID}).Err()
+}
+
+func (r *Repo) DoctorExists(ctx context.Context, doctorID primitive.ObjectID) error {
+	return r.DB.Collection("Doctor").FindOne(ctx, bson.M{"_id": doctorID}).Err()
+}
+
+func (r *Repo) DoctorClinicMappingExists(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID) error {
+	return r.DB.Collection("ClinicDoctor").FindOne(ctx, bson.M{"doctorID": doctorID, "clinicID": clinicID}).Err()
+}
+
+func (r *Repo) FetchMaxAppointments(ctx context.Context, clinicID primitive.ObjectID) (int, error) {
+	res := r.DB.Collection("Clinic").FindOne(ctx, bson.M{"_id": clinicID})
+	var clinic models.Clinic
+	if err := res.Decode(&clinic); err != nil {
 		return 0, err
 	}
-	defer session.EndSession(ctx)
 
-	//this is the transaction function which will contain db operations logic which must be executed in single operation
-	transactionFn := func(sessCtx mongo.SessionContext) (any, error) {
-		slotFilter := bson.D{
-			{Key: "bookingDate", Value: appointmentDetails.AppointmentDate},
-			{Key: "doctorID", Value: appointmentDetails.Doctor},
-			{Key: "clinicID", Value: appointmentDetails.Clinic},
-			{Key: "slotsBooked", Value: bson.M{
-				"$lt": maxAppointments,
-			}},
-		}
-
-		updateQuery := bson.D{
-			{Key: "$inc", Value: bson.D{
-				{Key: "slotsBooked", Value: 1},
-			}},
-			{Key: "$setOnInsert", Value: bson.D{
-				{Key: "bookingDate", Value: appointmentDetails.AppointmentDate},
-				{Key: "doctorID", Value: appointmentDetails.Doctor},
-				{Key: "clinicID", Value: appointmentDetails.Clinic},
-			}},
-		}
-
-		//create the update options to update slot first then get its slotsBooked and assign it to current appointment as slot
-		updateOptions := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
-		slotUpdationRes := r.DB.Collection("Slot").FindOneAndUpdate(sessCtx, slotFilter, updateQuery, updateOptions)
-		var slotUpdated models.Slot
-		if err := slotUpdationRes.Decode(&slotUpdated); err != nil {
-			return nil, err
-		}
-
-		//here get the updated slotsBooked and set it in appointment details it will represent the slot for this appointment
-		appointmentDetails.Slot = slotUpdated.SlotsBooked
-
-		//now save the appointment also
-		_, err := r.DB.Collection("Appointment").InsertOne(sessCtx, appointmentDetails)
-		if err != nil {
-			return nil, err
-		}
-
-		return appointmentDetails, nil
-	}
-
-	res, transactionErr := session.WithTransaction(ctx, transactionFn)
-	if transactionErr != nil {
-		return 0, transactionErr
-	}
-
-	//now try to convert res into appointment model
-	appointmentCreated, ok := res.(models.Appointment)
-	if !ok {
-		return 0, errors.New("failed to return appointment Created")
-	}
-
-	return appointmentCreated.Slot, nil
-
-}
-
-func (r *Repo) AppointmentSlotsBooked(ctx context.Context, maxAppointments int, clinicID primitive.ObjectID, doctorID primitive.ObjectID) ([]models.Slot, error) {
-	findQuery := bson.M{
-		"clinicID":    clinicID,
-		"doctorID":    doctorID,
-		"slotsBooked": maxAppointments,
-	}
-	cur, err := r.DB.Collection("Slot").Find(ctx, findQuery)
-	if err != nil {
-		return nil, err
-	}
-
-	defer cur.Close(ctx)
-	var slots []models.Slot
-	if err := cur.All(ctx, &slots); err != nil {
-		return nil, err
-	}
-
-	return slots, nil
-}
-
-// FetchDoctorWithclinics function fetches a doctor using doctor name or doctorid along with its clinics where he/she works
-func (r *Repo) FetchDoctorAtclinics(ctx context.Context, filter bson.M) ([]DTO.DoctorAtclinicsDTO, error) {
-	pipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: filter}},
-
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Doctor"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "localField", Value: "doctorID"},
-			{Key: "as", Value: "doctorDetails"},
-		},
-		}},
-
-		bson.D{
-			{Key: "$unwind", Value: "$doctorDetails"},
-		},
-
-		bson.D{
-			{Key: "$lookup", Value: bson.D{
-				{Key: "from", Value: "clinic"},
-				{Key: "foreignField", Value: "_id"},
-				{Key: "localField", Value: "clinicID"},
-				{Key: "as", Value: "clinicDetails"},
-			}},
-		},
-
-		bson.D{
-			{Key: "$unwind", Value: bson.D{
-				{Key: "path", Value: "$clinicDetails"},
-			}},
-		},
-
-		bson.D{
-			{Key: "$group", Value: bson.D{
-				{Key: "_id", Value: "$doctorID"},
-				{Key: "doctorDetails", Value: bson.D{{Key: "$first", Value: "$doctorDetails"}}},
-				{Key: "clinics", Value: bson.D{
-					{Key: "$push", Value: bson.D{
-						{Key: "$mergeObjects", Value: bson.A{
-							"$clinicDetails",
-							bson.D{{Key: "workingDays", Value: "$workingDays"}},
-							bson.D{{Key: "startTime", Value: "$startTiming"}},
-							bson.D{{Key: "endTime", Value: "$endTime"}},
-						}},
-					}},
-				}},
-			}},
-		},
-
-		bson.D{
-			{Key: "$project", Value: bson.D{
-				{Key: "doctorDetails.password", Value: 0},
-				{Key: "doctorDetails.email", Value: 0},
-			}},
-		},
-	}
-
-	cursor, err := r.DB.Collection("clinicDoctor").Aggregate(ctx, pipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var doctorAtclinics []DTO.DoctorAtclinicsDTO
-	if err := cursor.All(ctx, &doctorAtclinics); err != nil {
-		return nil, err
-	}
-
-	return doctorAtclinics, nil
-
-}
-
-func (r *Repo) FetchAppointments(ctx context.Context, groupingID string, filter bson.M) ([]sharedModels.Appointments, error) {
-
-	//this is by which documents will be grouped in mongo pipeline
-	groupBy := "$" + groupingID
-
-	pipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: filter}},
-		bson.D{{Key: "$group", Value: bson.D{
-			{Key: "_id", Value: groupBy},
-			{Key: "totalAppointments", Value: bson.D{{Key: "$sum", Value: 1}}},
-			{Key: "appointments", Value: bson.D{
-				{Key: "$push", Value: bson.D{
-					{Key: "doctorName", Value: "$doctorName"},
-					{Key: "patientName", Value: "$patientName"},
-					{Key: "patientMobile", Value: "$patientMobile"},
-					{Key: "userName", Value: "$userName"},
-					{Key: "patientAddress", Value: "$patientAddress"},
-					{Key: "status", Value: "$status"},
-					{Key: "registrationDate", Value: "$registrationDate"},
-					{Key: "appointmentDate", Value: "$appointmentDate"},
-					{Key: "clinicName", Value: "$clinicName"},
-					{Key: "slot", Value: "$slot"},
-				}}}},
-		}}},
-	}
-
-	cursor, err := r.DB.Collection("Appointment").Aggregate(ctx, pipeline)
-	if err != nil {
-		return nil, err
-	}
-
-	defer cursor.Close(ctx)
-
-	var appointments []sharedModels.Appointments
-	if err := cursor.All(ctx, &appointments); err != nil {
-		return nil, err
-	}
-
-	return appointments, nil
-
+	return clinic.MaxAppointments, nil
 }

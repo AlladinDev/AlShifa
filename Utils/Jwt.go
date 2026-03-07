@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"AlShifa/constants"
 	"errors"
 	"fmt"
 	"os"
@@ -9,20 +10,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Claims struct with userID, role, and expiration
-type Claims struct {
-	UserID string `json:"userID"`
-	Role   string `json:"role"`
-	jwt.RegisteredClaims
-}
-
 // GenerateJWT creates a token with userID, role, and custom expiration
-func GenerateJWT(userID string, role string) (string, error) {
+func GenerateJWT(claimOptions *constants.JwtCustomClaims) (string, error) {
 	jwtKey := []byte(os.Getenv("JWT_SECRET"))
 
-	claims := &Claims{
-		UserID: userID,
-		Role:   role,
+	claims := &constants.JwtCustomClaims{
+		UserID:     claimOptions.UserID,
+		Role:       claimOptions.Role,
+		Email:      claimOptions.Email,
+		Mobile:     claimOptions.Mobile,
+		IsVerified: claimOptions.IsVerified,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(JwtExpiryTime)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -33,13 +30,13 @@ func GenerateJWT(userID string, role string) (string, error) {
 	return token.SignedString(jwtKey)
 }
 
-func ValidateJWT(tokenStr string) (*Claims, error) {
+func ValidateJWT(tokenStr string) (*constants.JwtCustomClaims, error) {
 	jwtKey := []byte(os.Getenv("JWT_SECRET"))
 	if len(jwtKey) == 0 {
 		panic("JWt SECRET environment variable is not set")
 	}
 
-	claims := &Claims{}
+	claims := &constants.JwtCustomClaims{}
 
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (any, error) {
 		// Ensure token uses HMAC

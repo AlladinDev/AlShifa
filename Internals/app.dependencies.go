@@ -4,15 +4,17 @@ package internals
 import (
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type App struct {
-	Server *http.ServeMux
-	DB     *mongo.Database
-	Redis  *redis.Client
-	DI     *DI
+	*chi.Mux
+	DB        *mongo.Database
+	Redis     *redis.Client
+	DI        *DI
+	httpClint *http.Client
 }
 
 func NewApp() *App {
@@ -24,8 +26,8 @@ func (app *App) WithRedis(r *redis.Client) *App {
 	return app
 }
 
-func (app *App) WithServer(mux *http.ServeMux) *App {
-	app.Server = mux
+func (app *App) WithServer(mux *chi.Mux) *App {
+	app.Mux = mux
 	return app
 }
 
@@ -36,5 +38,10 @@ func (app *App) WithDB(db *mongo.Database) *App {
 
 func (app *App) WithDI() *App {
 	app.DI = NewDI()
+	return app
+}
+
+func (app *App) WithHTTPClient() *App {
+	app.httpClint = &http.Client{}
 	return app
 }

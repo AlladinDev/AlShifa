@@ -6,12 +6,8 @@ import (
 )
 
 type User struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id"`
-	Name         string             `json:"name" bson:"name"`
-	Role         string             `json:"role" bson:"role"`
-	Address      string             `json:"address" bson:"address"`
-	Password     string             `json:"password" bson:"password"`
-	Appointments []Appointment      `json:"appointments" bson:"appointments"`
-	Mobile       int                `json:"mobile" bson:"mobile"`
-	Email        string             `json:"email" bson:"email"`
+	ID      primitive.ObjectID `json:"id" bson:"_id"`
+	Name    string             `json:"name" bson:"name"`
+	Role    string             `json:"role" bson:"role"`
+	Address string             `json:"address" bson:"address"`
 }

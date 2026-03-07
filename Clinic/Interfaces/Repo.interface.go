@@ -2,10 +2,10 @@
 package interfaces
 
 import (
-	DTO "AlShifa/clinic/dtos"
 	"AlShifa/clinic/models"
-	sharedModels "AlShifa/models"
+	structs "AlShifa/structs"
 	"context"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -14,16 +14,15 @@ import (
 // IRepository defines the methods for loose coupling between the repository and its implementation.
 type IRepository interface {
 	Registerclinic(ctx context.Context, ownerID primitive.ObjectID, clinic models.Clinic) error
-	RegisterclinicOwner(ctx context.Context, owner models.Owner) error
-	GetOwnerDetails(ctx context.Context, filter bson.M) ([]models.Owner, error)
-	Searchclinic(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error)
+	Searchclinic(ctx context.Context, filter bson.M) ([]models.Clinic, error)
 	RegisterDoctor(ctx context.Context, doctorDetails models.Doctor) error
-	SearchDoctors(ctx context.Context, filter bson.M) ([]models.DoctorPublicDetails, error)
-	SearchDoctor(ctx context.Context, filter bson.M) (models.Doctor, error)
-	AddDoctorToclinic(ctx context.Context, clinicDetails models.AddDoctorToclinic) error
-	AddAppointment(ctx context.Context, maxAppointments int, appointmentDetails models.Appointment) (int, error)
-	AppointmentSlotsBooked(ctx context.Context, maxAppointments int, clinicID primitive.ObjectID, doctorID primitive.ObjectID) ([]models.Slot, error)
+	AddDoctorToclinic(ctx context.Context, clinicDetails models.ClinicDoctor) error
 	SearchclinicByID(ctx context.Context, clinicID primitive.ObjectID) (*models.Clinic, error)
-	FetchDoctorAtclinics(ctx context.Context, filter bson.M) ([]DTO.DoctorAtclinicsDTO, error)
-	FetchAppointments(ctx context.Context, groupBy string, filter bson.M) ([]sharedModels.Appointments, error)
+	ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDate time.Time) (error *structs.IAppError, doctorName string, clinicName string, clinicAddress string)
+	FetchDoctors(ctx context.Context, filter bson.M) ([]models.Doctor, error)
+	FetchDoctorClinicMappings(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error)
+	ClinicExists(ctx context.Context, clinicID primitive.ObjectID) error
+	DoctorExists(ctx context.Context, doctorID primitive.ObjectID) error
+	FetchMaxAppointments(ctx context.Context, clinicID primitive.ObjectID) (int, error)
+	DoctorClinicMappingExists(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID) error
 }

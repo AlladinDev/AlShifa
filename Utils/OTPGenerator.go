@@ -1,12 +1,19 @@
 package utils
 
 import (
-	"fmt"
 	"math/rand"
 )
 
-func GenerateOTP(uniquePrefix string) string {
+func GenerateOTP() string {
+	const digits = "0123456789"
+	length := 6
+	otp := make([]byte, length)
 
-	code := rand.Intn(900000) + 100000 // ensures a number between 100000-999999
-	return fmt.Sprintf("%s:%d", uniquePrefix, code)
+	for i := 0; i < length; i++ {
+		// crypto/rand ensures cryptographically secure random numbers
+		n := rand.Intn(length + 1)
+		otp[i] = digits[n]
+	}
+
+	return string(otp)
 }

@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func ValidateAddDoctorToclinicDetails(details *models.AddDoctorToclinic) map[string]string {
+func ValidateAddDoctorToclinicDetails(details *models.ClinicDoctor) map[string]string {
 	validationErrors := make(map[string]string)
 	if details == nil {
 		validationErrors["details"] = "missing clinic details"
@@ -19,6 +19,14 @@ func ValidateAddDoctorToclinicDetails(details *models.AddDoctorToclinic) map[str
 		validationErrors["doctorID"] = "Invalid doctor id"
 	} else {
 		details.DoctorID = doctorMongoDBID
+	}
+
+	//validate clinicid whether this is a valid clinicid or not
+	clinicMongodbID, clinicIDErr := primitive.ObjectIDFromHex(details.ClinicID.Hex())
+	if clinicIDErr != nil {
+		validationErrors["clinicID"] = "Invalid clinicID"
+	} else {
+		details.ClinicID = clinicMongodbID
 	}
 
 	if len(details.WorkingDays) == 0 {

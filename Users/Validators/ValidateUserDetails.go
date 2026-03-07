@@ -1,9 +1,8 @@
 package validators
 
 import (
-	utils "AlShifa/utils"
 	models "AlShifa/users/models"
-	"fmt"
+	utils "AlShifa/utils"
 	"strings"
 	"unicode"
 )
@@ -32,55 +31,12 @@ func ValidateUser(u *models.User) map[string]string {
 		}
 	}
 
-	// ---------- Password ----------
-	password := u.Password
-	if password == "" {
-		errors["password"] = "password is required"
-	} else if len(password) > utils.MaxPasswordLength {
-		errors["password"] = "password is too long"
-	} else if len(password) < utils.MinPasswordLength {
-		errors["password"] = "password is too short"
-	} else {
-		var hasUpper, hasLower, hasDigit, hasSpecial bool
-
-		if len(password) < utils.MinPasswordLength {
-			errors["password"] = "password is too short"
-		}
-
-		for _, r := range password {
-			switch {
-			case unicode.IsUpper(r):
-				hasUpper = true
-			case unicode.IsLower(r):
-				hasLower = true
-			case unicode.IsDigit(r):
-				hasDigit = true
-			case unicode.IsPunct(r) || unicode.IsSymbol(r):
-				hasSpecial = true
-			}
-		}
-
-		if !hasUpper || !hasLower || !hasDigit || !hasSpecial {
-			errors["password"] = "password must contain upper, lower, digit and special character"
-		}
-	}
-
 	// ---------- Address ----------
 	address := strings.TrimSpace(u.Address)
 	if address == "" {
 		errors["address"] = "address is required"
 	} else if len(address) < utils.MinAddressLength {
 		errors["address"] = "address is too short"
-	}
-
-	// ---------- Mobile ----------
-	mobile := fmt.Sprintf("%d", u.Mobile)
-	if u.Mobile < 0 {
-		errors["mobile"] = "mobile number must be positive"
-	} else if u.Mobile == 0 {
-		errors["mobile"] = "mobile number is required"
-	} else if len(mobile) != utils.MobileLength {
-		errors["mobile"] = "mobile number must be 10 digits"
 	}
 
 	// ---------- Final ----------
