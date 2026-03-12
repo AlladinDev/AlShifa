@@ -15,7 +15,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.1'
+          go-version: '1.25.5'
 
       - name: Load env vars from secret
         run: echo "${{ secrets.ENV_FILE }}" >> $GITHUB_ENV
