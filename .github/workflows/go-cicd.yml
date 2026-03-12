@@ -19,12 +19,7 @@ jobs:
 
       - name: Load env vars from secret
         run: echo "${{ secrets.ENV_FILE }}" >> $GITHUB_ENV
-
-
-      - name: Clean Go cache
-        run: go clean -cache -modcache -i -r
-
-    
+ 
 
       - name: Build binary
         run: go build 
