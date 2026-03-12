@@ -2,10 +2,10 @@
 package auth
 
 import (
-	"AlShifa/auth/controller"
-	"AlShifa/auth/repository"
-	"AlShifa/auth/service"
-	"AlShifa/internals"
+	"github.com/AlladinDev/AlShifa/auth/controller"
+	"github.com/AlladinDev/AlShifa/auth/repository"
+	"github.com/AlladinDev/AlShifa/auth/service"
+	"github.com/AlladinDev/AlShifa/internals"
 
 	"github.com/go-chi/chi/v5"
 )

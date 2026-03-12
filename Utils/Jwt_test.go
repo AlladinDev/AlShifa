@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"AlShifa/constants"
 	"testing"
+
+	"github.com/AlladinDev/AlShifa/constants"
 )
 
 func TestJwtGenerationAndValidation(t *testing.T) {

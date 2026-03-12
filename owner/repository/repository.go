@@ -1,10 +1,11 @@
-// Package Repository provides Repository functions for owner Repository
-package Repository
+// Package repository provides Repository functions for owner Repository
+package repository
 
 import (
-	"AlShifa/owner/interfaces"
-	"AlShifa/owner/models"
 	"context"
+
+	"github.com/AlladinDev/AlShifa/owner/interfaces"
+	"github.com/AlladinDev/AlShifa/owner/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

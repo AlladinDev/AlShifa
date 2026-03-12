@@ -2,13 +2,13 @@
 package appointment
 
 import (
-	"AlShifa/appointment/controller"
-	"AlShifa/appointment/interfaces"
-	"AlShifa/appointment/repository"
-	"AlShifa/appointment/service"
-	"AlShifa/constants"
-	"AlShifa/internals"
-	"AlShifa/middleware"
+	"github.com/AlladinDev/AlShifa/appointment/controller"
+	"github.com/AlladinDev/AlShifa/appointment/interfaces"
+	"github.com/AlladinDev/AlShifa/appointment/repository"
+	"github.com/AlladinDev/AlShifa/appointment/service"
+	"github.com/AlladinDev/AlShifa/constants"
+	"github.com/AlladinDev/AlShifa/internals"
+	"github.com/AlladinDev/AlShifa/middleware"
 
 	"github.com/go-chi/chi/v5"
 )

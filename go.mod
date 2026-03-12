@@ -1,8 +1,10 @@
-module AlShifa
+module github.com/AlladinDev/AlShifa
 
 go 1.25.1
 
 require (
+	github.com/go-chi/chi v1.5.5
+	github.com/go-chi/chi/v5 v5.2.5
 	go.mongodb.org/mongo-driver v1.17.6
 	golang.org/x/crypto v0.47.0
 )
@@ -10,8 +12,6 @@ require (
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/go-chi/chi v1.5.5 // indirect
-	github.com/go-chi/chi/v5 v5.2.5 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 )
 

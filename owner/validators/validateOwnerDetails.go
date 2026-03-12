@@ -2,9 +2,10 @@
 package validators
 
 import (
-	"AlShifa/owner/models"
-	utils "AlShifa/utils"
 	"strings"
+
+	"github.com/AlladinDev/AlShifa/owner/models"
+	utils "github.com/AlladinDev/AlShifa/utils"
 )
 
 // MobileLength is 10 for standard 10-digit numbers

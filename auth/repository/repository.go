@@ -2,9 +2,10 @@
 package repository
 
 import (
-	"AlShifa/auth/interfaces"
-	"AlShifa/auth/models"
 	"context"
+
+	"github.com/AlladinDev/AlShifa/auth/interfaces"
+	"github.com/AlladinDev/AlShifa/auth/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

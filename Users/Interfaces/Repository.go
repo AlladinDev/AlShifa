@@ -2,8 +2,9 @@
 package interfaces
 
 import (
-	models "AlShifa/users/models"
 	"context"
+
+	models "github.com/AlladinDev/AlShifa/users/models"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

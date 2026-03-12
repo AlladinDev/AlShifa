@@ -2,17 +2,18 @@
 package controller
 
 import (
-	interfaces "AlShifa/clinic/interfaces"
-	"AlShifa/clinic/models"
-	validators "AlShifa/clinic/validators"
-	"AlShifa/constants"
-	structs "AlShifa/structs"
-	utils "AlShifa/utils"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+
+	interfaces "github.com/AlladinDev/AlShifa/clinic/interfaces"
+	"github.com/AlladinDev/AlShifa/clinic/models"
+	validators "github.com/AlladinDev/AlShifa/clinic/validators"
+	"github.com/AlladinDev/AlShifa/constants"
+	structs "github.com/AlladinDev/AlShifa/structs"
+	utils "github.com/AlladinDev/AlShifa/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

@@ -1,7 +1,7 @@
 package validators
 
 import (
-	"AlShifa/clinic/models"
+	"github.com/AlladinDev/AlShifa/clinic/models"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

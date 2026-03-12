@@ -2,11 +2,12 @@
 package service
 
 import (
-	structs "AlShifa/structs"
-	interfaces "AlShifa/users/interfaces"
-	models "AlShifa/users/models"
 	"context"
 	"net/http"
+
+	structs "github.com/AlladinDev/AlShifa/structs"
+	interfaces "github.com/AlladinDev/AlShifa/users/interfaces"
+	models "github.com/AlladinDev/AlShifa/users/models"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"

@@ -2,8 +2,8 @@
 package repository
 
 import (
-	"AlShifa/appointment/interfaces"
-	"AlShifa/appointment/models"
+	"github.com/AlladinDev/AlShifa/appointment/interfaces"
+	"github.com/AlladinDev/AlShifa/appointment/models"
 
 	"context"
 	"errors"

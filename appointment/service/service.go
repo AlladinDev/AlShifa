@@ -2,14 +2,16 @@
 package service
 
 import (
-	"AlShifa/appointment/interfaces"
-	"AlShifa/appointment/models"
-	"AlShifa/constants"
 	"net/http"
 	"time"
 
-	"AlShifa/structs"
+	"github.com/AlladinDev/AlShifa/appointment/interfaces"
+	"github.com/AlladinDev/AlShifa/appointment/models"
+	"github.com/AlladinDev/AlShifa/constants"
+
 	"context"
+
+	"github.com/AlladinDev/AlShifa/structs"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

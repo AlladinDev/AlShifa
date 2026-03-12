@@ -1,19 +1,20 @@
 package main
 
 import (
-	"AlShifa/appointment"
-	clinic "AlShifa/clinic"
-	constants "AlShifa/constants"
-	internals "AlShifa/internals"
-	alShifaMiddlewares "AlShifa/middleware"
-	"AlShifa/owner"
-	users "AlShifa/users"
-	utils "AlShifa/utils"
 	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/AlladinDev/AlShifa/appointment"
+	clinic "github.com/AlladinDev/AlShifa/clinic"
+	constants "github.com/AlladinDev/AlShifa/constants"
+	internals "github.com/AlladinDev/AlShifa/internals"
+	alShifaMiddlewares "github.com/AlladinDev/AlShifa/middleware"
+	"github.com/AlladinDev/AlShifa/owner"
+	users "github.com/AlladinDev/AlShifa/users"
+	utils "github.com/AlladinDev/AlShifa/utils"
 
 	chiMiddlewares "github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
@@ -88,7 +89,7 @@ func main() {
 	///----------------------redis initialization end
 
 	appStore := internals.NewApp().
-		WithDB(mongoClient.Database("AlShifa")).
+		WithDB(mongoClient.Database("github.com/AlladinDev/AlShifa")).
 		WithDI().
 		WithRedis(&redisInstance).
 		WithServer(chiRouter)

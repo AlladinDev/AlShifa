@@ -2,12 +2,12 @@
 package controller
 
 import (
-	"AlShifa/constants"
-	structs "AlShifa/structs"
-	interfaces "AlShifa/users/interfaces"
-	models "AlShifa/users/models"
-	validators "AlShifa/users/validators"
-	utils "AlShifa/utils"
+	"github.com/AlladinDev/AlShifa/constants"
+	structs "github.com/AlladinDev/AlShifa/structs"
+	interfaces "github.com/AlladinDev/AlShifa/users/interfaces"
+	models "github.com/AlladinDev/AlShifa/users/models"
+	validators "github.com/AlladinDev/AlShifa/users/validators"
+	utils "github.com/AlladinDev/AlShifa/utils"
 
 	"encoding/json"
 	"net/http"

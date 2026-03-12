@@ -1,8 +1,8 @@
-// Package utils provides utility functions and types for the AlShifa application.
+// Package utils provides utility functions and types for the github.com/AlladinDev/AlShifa application.
 package utils
 
 import (
-	structs "AlShifa/structs"
+	structs "github.com/AlladinDev/AlShifa/structs"
 )
 
 func ReturnAppError(

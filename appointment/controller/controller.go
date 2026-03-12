@@ -2,12 +2,13 @@
 package controller
 
 import (
-	"AlShifa/appointment/interfaces"
-	"AlShifa/appointment/models"
-	"AlShifa/structs"
-	"AlShifa/utils"
 	"encoding/json"
 	"net/http"
+
+	"github.com/AlladinDev/AlShifa/appointment/interfaces"
+	"github.com/AlladinDev/AlShifa/appointment/models"
+	"github.com/AlladinDev/AlShifa/structs"
+	"github.com/AlladinDev/AlShifa/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

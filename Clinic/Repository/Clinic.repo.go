@@ -2,15 +2,16 @@
 package repository
 
 import (
-	"AlShifa/clinic/models"
-	"AlShifa/structs"
 	"context"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
-	interfaces "AlShifa/clinic/interfaces"
+	"github.com/AlladinDev/AlShifa/clinic/models"
+	"github.com/AlladinDev/AlShifa/structs"
+
+	interfaces "github.com/AlladinDev/AlShifa/clinic/interfaces"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

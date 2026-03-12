@@ -2,10 +2,11 @@
 package clinicbridge
 
 import (
-	"AlShifa/appointment/interfaces"
-	"AlShifa/structs"
 	"context"
 	"time"
+
+	"github.com/AlladinDev/AlShifa/appointment/interfaces"
+	"github.com/AlladinDev/AlShifa/structs"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

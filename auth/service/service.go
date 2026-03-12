@@ -2,15 +2,16 @@
 package service
 
 import (
-	"AlShifa/auth/interfaces"
-	"AlShifa/auth/models"
-	"AlShifa/constants"
-	"AlShifa/structs"
-	"AlShifa/utils"
 	"context"
 	"net/http"
 	"slices"
 	"time"
+
+	"github.com/AlladinDev/AlShifa/auth/interfaces"
+	"github.com/AlladinDev/AlShifa/auth/models"
+	"github.com/AlladinDev/AlShifa/constants"
+	"github.com/AlladinDev/AlShifa/structs"
+	"github.com/AlladinDev/AlShifa/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

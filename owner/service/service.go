@@ -1,13 +1,15 @@
+// Package service provides service functions for owner module
 package service
 
 import (
-	"AlShifa/constants"
-	"AlShifa/owner/interfaces"
-	"AlShifa/owner/models"
-	"AlShifa/structs"
 	"context"
 	"net/http"
 	"time"
+
+	"github.com/AlladinDev/AlShifa/constants"
+	"github.com/AlladinDev/AlShifa/owner/interfaces"
+	"github.com/AlladinDev/AlShifa/owner/models"
+	"github.com/AlladinDev/AlShifa/structs"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

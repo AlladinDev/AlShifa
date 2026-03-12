@@ -3,20 +3,21 @@
 package clinic
 
 import (
-	controller "AlShifa/clinic/controller"
-	"AlShifa/clinic/models"
-	repository "AlShifa/clinic/repository"
-	service "AlShifa/clinic/service"
-	validators "AlShifa/clinic/validators"
-	constants "AlShifa/constants"
-	emailnotifier "AlShifa/emailnotifier"
-	internals "AlShifa/internals"
-	middleware "AlShifa/middleware"
-	redispack "AlShifa/redispack"
+	controller "github.com/AlladinDev/AlShifa/clinic/controller"
+	"github.com/AlladinDev/AlShifa/clinic/models"
+	repository "github.com/AlladinDev/AlShifa/clinic/repository"
+	service "github.com/AlladinDev/AlShifa/clinic/service"
+	validators "github.com/AlladinDev/AlShifa/clinic/validators"
+	constants "github.com/AlladinDev/AlShifa/constants"
+	emailnotifier "github.com/AlladinDev/AlShifa/emailnotifier"
+	internals "github.com/AlladinDev/AlShifa/internals"
+	middleware "github.com/AlladinDev/AlShifa/middleware"
+	redispack "github.com/AlladinDev/AlShifa/redispack"
 
-	utils "AlShifa/utils"
 	"fmt"
 	"log"
+
+	utils "github.com/AlladinDev/AlShifa/utils"
 
 	"github.com/go-chi/chi/v5"
 )

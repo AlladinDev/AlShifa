@@ -2,10 +2,11 @@
 package interfaces
 
 import (
-	"AlShifa/clinic/models"
-	structs "AlShifa/structs"
 	"context"
 	"time"
+
+	"github.com/AlladinDev/AlShifa/clinic/models"
+	structs "github.com/AlladinDev/AlShifa/structs"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

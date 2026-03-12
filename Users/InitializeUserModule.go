@@ -2,12 +2,12 @@
 package users
 
 import (
-	constants "AlShifa/constants"
-	internals "AlShifa/internals"
-	"AlShifa/middleware"
-	controller "AlShifa/users/controller"
-	repository "AlShifa/users/repository"
-	service "AlShifa/users/service"
+	constants "github.com/AlladinDev/AlShifa/constants"
+	internals "github.com/AlladinDev/AlShifa/internals"
+	"github.com/AlladinDev/AlShifa/middleware"
+	controller "github.com/AlladinDev/AlShifa/users/controller"
+	repository "github.com/AlladinDev/AlShifa/users/repository"
+	service "github.com/AlladinDev/AlShifa/users/service"
 
 	"github.com/go-chi/chi/v5"
 )

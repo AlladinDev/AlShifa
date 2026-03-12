@@ -2,18 +2,19 @@
 package service
 
 import (
-	interfaces "AlShifa/clinic/interfaces"
-	"AlShifa/clinic/models"
-	"AlShifa/constants"
-	appInterfaces "AlShifa/interfaces"
-	structs "AlShifa/structs"
-	utils "AlShifa/utils"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
+
+	interfaces "github.com/AlladinDev/AlShifa/clinic/interfaces"
+	"github.com/AlladinDev/AlShifa/clinic/models"
+	"github.com/AlladinDev/AlShifa/constants"
+	appInterfaces "github.com/AlladinDev/AlShifa/interfaces"
+	structs "github.com/AlladinDev/AlShifa/structs"
+	utils "github.com/AlladinDev/AlShifa/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

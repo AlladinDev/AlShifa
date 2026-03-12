@@ -1,10 +1,11 @@
 package validators
 
 import (
-	models "AlShifa/users/models"
-	utils "AlShifa/utils"
 	"strings"
 	"unicode"
+
+	models "github.com/AlladinDev/AlShifa/users/models"
+	utils "github.com/AlladinDev/AlShifa/utils"
 )
 
 func ValidateUser(u *models.User) map[string]string {

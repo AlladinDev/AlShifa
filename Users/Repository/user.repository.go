@@ -2,9 +2,10 @@
 package repository
 
 import (
-	interfaces "AlShifa/users/interfaces"
-	models "AlShifa/users/models"
 	"context"
+
+	interfaces "github.com/AlladinDev/AlShifa/users/interfaces"
+	models "github.com/AlladinDev/AlShifa/users/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

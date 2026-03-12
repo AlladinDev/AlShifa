@@ -2,7 +2,7 @@
 package owner
 
 import (
-	"AlShifa/internals"
+	"github.com/AlladinDev/AlShifa/internals"
 )
 
 func InitOwner(app *internals.App) {

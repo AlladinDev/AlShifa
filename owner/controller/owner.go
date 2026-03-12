@@ -2,14 +2,15 @@
 package controller
 
 import (
-	"AlShifa/constants"
-	"AlShifa/owner/interfaces"
-	"AlShifa/owner/models"
-	"AlShifa/owner/validators"
-	"AlShifa/structs"
-	"AlShifa/utils"
 	"encoding/json"
 	"net/http"
+
+	"github.com/AlladinDev/AlShifa/constants"
+	"github.com/AlladinDev/AlShifa/owner/interfaces"
+	"github.com/AlladinDev/AlShifa/owner/models"
+	"github.com/AlladinDev/AlShifa/owner/validators"
+	"github.com/AlladinDev/AlShifa/structs"
+	"github.com/AlladinDev/AlShifa/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 )

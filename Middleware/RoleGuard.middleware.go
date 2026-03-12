@@ -1,10 +1,11 @@
 package middleware
 
 import (
-	"AlShifa/constants"
-	utils "AlShifa/utils"
 	"net/http"
 	"slices"
+
+	"github.com/AlladinDev/AlShifa/constants"
+	utils "github.com/AlladinDev/AlShifa/utils"
 )
 
 func RoleGuardmiddleware(allowedRoles ...string) http.HandlerFunc {

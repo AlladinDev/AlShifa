@@ -2,15 +2,16 @@
 package controller
 
 import (
-	"AlShifa/auth/dtos"
-	"AlShifa/auth/interfaces"
-	"AlShifa/auth/models"
-	validation "AlShifa/auth/validators"
-	"AlShifa/constants"
-	"AlShifa/structs"
-	"AlShifa/utils"
 	"encoding/json"
 	"net/http"
+
+	"github.com/AlladinDev/AlShifa/auth/dtos"
+	"github.com/AlladinDev/AlShifa/auth/interfaces"
+	"github.com/AlladinDev/AlShifa/auth/models"
+	validation "github.com/AlladinDev/AlShifa/auth/validators"
+	"github.com/AlladinDev/AlShifa/constants"
+	"github.com/AlladinDev/AlShifa/structs"
+	"github.com/AlladinDev/AlShifa/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 )

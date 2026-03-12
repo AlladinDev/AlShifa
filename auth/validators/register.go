@@ -2,13 +2,14 @@
 package validation
 
 import (
-	"AlShifa/auth/models"
-	"AlShifa/constants"
-	"AlShifa/utils"
 	"regexp"
 	"slices"
 	"strings"
 	"unicode"
+
+	"github.com/AlladinDev/AlShifa/auth/models"
+	"github.com/AlladinDev/AlShifa/constants"
+	"github.com/AlladinDev/AlShifa/utils"
 )
 
 func ValidateCredentials(c *models.Credientials) map[string]string {

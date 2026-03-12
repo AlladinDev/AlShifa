@@ -58,7 +58,7 @@ func (e *EmailService) SendNotification(to string, body string) error {
 	m := gomail.NewMessage()
 	m.SetHeader("From", e.From)
 	m.SetHeader("To", to)
-	m.SetHeader("Subject", "Hello From AlShifa Platform OTP For Your OnBoarding")
+	m.SetHeader("Subject", "Hello From github.com/AlladinDev/AlShifa Platform OTP For Your OnBoarding")
 	m.SetBody("text/plain", body)
 
 	return e.Dialer.DialAndSend(m)

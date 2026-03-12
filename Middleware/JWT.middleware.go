@@ -2,13 +2,14 @@
 package middleware
 
 import (
-	"AlShifa/constants"
-	structs "AlShifa/structs"
-	utils "AlShifa/utils"
 	"context"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/AlladinDev/AlShifa/constants"
+	structs "github.com/AlladinDev/AlShifa/structs"
+	utils "github.com/AlladinDev/AlShifa/utils"
 )
 
 func JwtAuthmiddleware(next http.Handler) http.Handler {

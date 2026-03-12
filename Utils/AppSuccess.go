@@ -1,6 +1,6 @@
 package utils
 
-import structs "AlShifa/structs"
+import structs "github.com/AlladinDev/AlShifa/structs"
 
 func ReturnAppSuccess(statusCode int, message string, data any) *structs.IAppSuccess {
 

@@ -1,9 +1,10 @@
 package interfaces
 
 import (
-	"AlShifa/appointment/models"
-	"AlShifa/structs"
 	"context"
+
+	"github.com/AlladinDev/AlShifa/appointment/models"
+	"github.com/AlladinDev/AlShifa/structs"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

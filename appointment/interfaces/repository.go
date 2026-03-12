@@ -2,7 +2,7 @@
 package interfaces
 
 import (
-	"AlShifa/appointment/models"
+	"github.com/AlladinDev/AlShifa/appointment/models"
 
 	"context"
 

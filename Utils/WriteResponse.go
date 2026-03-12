@@ -1,9 +1,10 @@
 package utils
 
 import (
-	structs "AlShifa/structs"
 	"encoding/json"
 	"net/http"
+
+	structs "github.com/AlladinDev/AlShifa/structs"
 )
 
 func WriteResponse(res http.ResponseWriter, status int, response any) error {

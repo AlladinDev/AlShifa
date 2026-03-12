@@ -1,11 +1,12 @@
 package utils
 
 import (
-	"AlShifa/constants"
 	"errors"
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/AlladinDev/AlShifa/constants"
 
 	"github.com/golang-jwt/jwt/v5"
 )
