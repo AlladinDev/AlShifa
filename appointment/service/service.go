@@ -3,11 +3,11 @@ package service
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/AlladinDev/AlShifa/appointment/interfaces"
 	"github.com/AlladinDev/AlShifa/appointment/models"
 	"github.com/AlladinDev/AlShifa/constants"
-	sharedModels "github.com/AlladinDev/AlShifa/models"
 	"github.com/AlladinDev/AlShifa/utils"
 
 	"context"
@@ -32,7 +32,22 @@ func NewService(repo interfaces.IRepository, clinicService interfaces.IClinicMod
 
 var _ interfaces.IService = (*Service)(nil)
 
-func (s *Service) AddAppointment(ctx context.Context, maxAppointments int, appointmentDetails sharedModels.Appointment) (int, *structs.IAppError) {
+func (s *Service) AddAppointment(ctx context.Context, appointmentDetails models.Appointment) (int, *structs.IAppError) {
+	//call clinicservice to get clinic and doctor details
+	doctorName, clinicName, clinicAddress, maxAppointments, err := s.clinicService.ClinicDoctorDetails(ctx, appointmentDetails.ClinicID, appointmentDetails.DoctorID, appointmentDetails.AppointmentDate)
+	if err != nil {
+		return 0, err
+	}
+
+	//now update actual doctorName clinicName clinicAddress to appointment payload because we cant trust frontend it can send wrong names also so we just trust clinicid and doctorid and names we fetch ourselves
+	appointmentDetails.DoctorName = doctorName
+	appointmentDetails.ClinicName = clinicName
+	appointmentDetails.ClinicAddress = clinicAddress
+
+	//now add some default things like status createdAt
+	appointmentDetails.Status = constants.StatusAppointmentPending
+	appointmentDetails.CreatedAt = time.Now()
+	appointmentDetails.ID = primitive.NewObjectID()
 
 	//now call the repo to save data
 	slotNumber, appointmentSavingErr := s.repo.AddAppointment(ctx, maxAppointments, appointmentDetails)
@@ -103,7 +118,7 @@ func (s *Service) AddAppointment(ctx context.Context, maxAppointments int, appoi
 // - Prevents unauthorized data access by validating ownership relationships.
 // - Keeps repository layer clean by ensuring only valid, pre-processed filters reach it.
 // - Improves maintainability by isolating role-specific logic in a single place.
-func (s *Service) FetchAppointments(ctx context.Context, filters bson.M) ([]sharedModels.Appointment, *structs.IAppError) {
+func (s *Service) FetchAppointments(ctx context.Context, filters bson.M) ([]models.Appointment, *structs.IAppError) {
 	//here we need to validate userid if usertype passed in filters is receptionist we need to grab this receptionist from db and get its clinicid
 	//similary if usertype is clinicowner in filters there will be  ownerid and also clinicID we need to verify whether this owner owns this clinic or not
 	//so these validations need to be done for user we can get its id from req.header we dont need to verify it , only for receptionist and clinic owner we need to further verify
@@ -169,6 +184,8 @@ func (s *Service) FetchAppointments(ctx context.Context, filters bson.M) ([]shar
 		}
 		filters["clinicID"] = clinicID
 
+	case constants.RoleDoctor:
+		filters["doctorID"] = userID
 	}
 
 	//now delete the userType it is no longer needed now

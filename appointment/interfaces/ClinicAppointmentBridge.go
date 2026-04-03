@@ -11,7 +11,7 @@ import (
 )
 
 type IClinicModule interface {
-	ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDateRequested time.Time) (error *structs.IAppError, doctorName string, clinicName string, clinicAddress string, clinicMaxAppointments int)
+	ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDateRequested time.Time) (doctorName string, clinicName string, clinicAddress string, clinicMaxAppointments int, error *structs.IAppError)
 	ClinicExists(ctx context.Context, clinicID primitive.ObjectID) *structs.IAppError
 	DoctorExists(ctx context.Context, doctorID primitive.ObjectID) *structs.IAppError
 	FetchMaxAppointments(ctx context.Context, clinicID primitive.ObjectID) (int, *structs.IAppError)

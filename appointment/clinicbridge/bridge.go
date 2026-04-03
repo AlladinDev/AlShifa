@@ -24,7 +24,7 @@ func AppointmentClinicBridge(clinicService interfaces.IClinicModule) *ClinicBrid
 
 var _ interfaces.IClinicModule = (*ClinicBridge)(nil)
 
-func (b *ClinicBridge) ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDateRequested time.Time) (error *structs.IAppError, doctorName string, clinicName string, clinicAddress string, clinicMaxAppointment int) {
+func (b *ClinicBridge) ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDateRequested time.Time) (doctorName string, clinicName string, clinicAddress string, clinicMaxAppointment int, error *structs.IAppError) {
 	return b.clinicService.ClinicDoctorDetails(ctx, clinicID, doctorID, appointmentDateRequested)
 }
 

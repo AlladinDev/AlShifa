@@ -17,7 +17,8 @@ type IService interface {
 	Registerclinic(ctx context.Context, ownerID primitive.ObjectID, clinic models.Clinic) *structs.IAppError
 	Searchclinic(ctx context.Context, filter bson.M) ([]models.Clinic, *structs.IAppError)
 	RegisterDoctor(ctx context.Context, doctorDetails models.Doctor) *structs.IAppError
-	ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDateRequested time.Time) (error *structs.IAppError, doctorName string, clinicName string, clinicAddress string, maxAppointmentsAllowed int)
+
+	ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDateRequested time.Time) (doctorName string, clinicName string, clinicAddress string, maxAppointmentsAllowed int, error *structs.IAppError)
 	AddDoctorToclinic(ctx context.Context, userID primitive.ObjectID, clinicDetails models.ClinicDoctor) *structs.IAppError
 	FetchDoctors(ctx context.Context, filter bson.M) ([]models.Doctor, *structs.IAppError)
 	LoginDoctor(ctx context.Context, loginDetails dtos.LoginEmailPasswordDTO) (string, *structs.IAppError)

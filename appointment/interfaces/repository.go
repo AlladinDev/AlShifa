@@ -3,7 +3,6 @@ package interfaces
 
 import (
 	"github.com/AlladinDev/AlShifa/appointment/models"
-	sharedModels "github.com/AlladinDev/AlShifa/models"
 
 	"context"
 
@@ -12,8 +11,8 @@ import (
 )
 
 type IRepository interface {
-	AddAppointment(ctx context.Context, clinicMaxAppointment int, appointmentDetails sharedModels.Appointment) (int, error)
-	FetchAppointments(ctx context.Context, filters bson.M) ([]sharedModels.Appointment, error)
+	AddAppointment(ctx context.Context, clinicMaxAppointment int, appointmentDetails models.Appointment) (int, error)
+	FetchAppointments(ctx context.Context, filters bson.M) ([]models.Appointment, error)
 	UpdateAppointmentStatus(ctx context.Context, appointmentID primitive.ObjectID, status bool) error
 	FetchAppointmentDaysBooked(ctx context.Context, maxAppointments int, doctorID primitive.ObjectID, clinicID primitive.ObjectID) ([]models.Slot, error)
 }

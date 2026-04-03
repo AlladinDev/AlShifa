@@ -18,10 +18,10 @@ func InitAppointmentModule(app *internals.App) {
 
 	//get the clinic module from di
 	clinicModuleAny, _ := app.DI.GetService(constants.NameClinicService)
-	clinicModule, ok := clinicModuleAny.(interfaces.IClinicModule)
-	if !ok {
-		panic("Interface conversion  failed in appointment module when getting clinic module from di")
-	}
+	clinicModule := clinicModuleAny.(interfaces.IClinicModule)
+	// if !ok {
+	// 	panic("Interface conversion  failed in appointment module when getting clinic module from di")
+	// }
 
 	service := service.NewService(repository, clinicModule)
 
@@ -31,7 +31,7 @@ func InitAppointmentModule(app *internals.App) {
 	controller := controller.NewController(service)
 
 	app.Route("/appointments", func(r chi.Router) {
-		//r.With(middleware.JwtAuthmiddleware).Post("/", controller.AddAppointment)
+		r.With(middleware.JwtAuthmiddleware, middleware.RoleGuardmiddleware(constants.RoleUser)).Post("/", controller.AddAppointment)
 		r.With(middleware.JwtAuthmiddleware).Put("/", controller.UpdateAppointmentStatus)
 		r.With(middleware.JwtAuthmiddleware).Get("/", controller.FetchAppointments)
 	})

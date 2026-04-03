@@ -26,7 +26,7 @@ type Appointment struct {
 	DoctorID primitive.ObjectID `json:"doctorID" bson:"doctorID"`
 
 	// 8 bytes
-	PatientMobile int `json:"patientMobile" bson:"patientMobile"`
+	PatientMobile string `json:"patientMobile" bson:"patientMobile"`
 
 	// 1 byte (placed last to avoid padding waste)
 	Slot int `json:"slot" bson:"slot"`

@@ -10,7 +10,6 @@ import (
 	"github.com/AlladinDev/AlShifa/auth"
 	clinic "github.com/AlladinDev/AlShifa/clinic"
 	constants "github.com/AlladinDev/AlShifa/constants"
-	coordinator "github.com/AlladinDev/AlShifa/coodinator"
 	internals "github.com/AlladinDev/AlShifa/internals"
 	alShifaMiddlewares "github.com/AlladinDev/AlShifa/middleware"
 	"github.com/AlladinDev/AlShifa/owner"
@@ -40,7 +39,7 @@ func main() {
 
 	//--------------------apply middlewares----------------
 	//timeout middewares
-	chiRouter.Use(chiMiddlewares.Logger)
+	//chiRouter.Use(chiMiddlewares.Logger)
 	chiRouter.Use(chiMiddlewares.Recoverer)
 	chiRouter.Use(alShifaMiddlewares.Cors)
 	chiRouter.Use(chiMiddlewares.Timeout(constants.RequestTimeout))
@@ -79,7 +78,7 @@ func main() {
 	appointment.InitAppointmentModule(appStore)
 
 	//at end initialise coordinator module
-	coordinator.InitCoordinator(appStore)
+	//coordinator.InitCoordinator(appStore)
 
 	//print services registered in di for debugging
 	appStore.DI.PrintServicesInDI()

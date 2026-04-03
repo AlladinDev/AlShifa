@@ -159,36 +159,36 @@ func (service *clinicService) SearchDoctor(ctx context.Context, filter bson.M) (
 	return &doctor[0], nil
 }
 
-func (service *clinicService) ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDateRequested time.Time) (error *structs.IAppError, doctorName string, clinicName string, clinicAddress string, maxAppointmentsAllowed int) {
+func (service *clinicService) ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDateRequested time.Time) (doctorName string, clinicName string, clinicAddress string, maxAppointmentsAllowed int, error *structs.IAppError) {
 	//checkout whether this clinic exists or not
 	clinic, clinicSearchErr := service.Repo.SearchclinicByID(ctx, clinicID)
 	if clinicSearchErr != nil {
-		return &structs.IAppError{
+		return "", "", "", 0, &structs.IAppError{
 			Message:    "Failed to Search Clinic",
 			Reason:     clinicSearchErr.Error(),
 			StatusCode: http.StatusInternalServerError,
 			ErrorObj:   clinicSearchErr,
-		}, "", "", "", 0
+		}
 	}
 
 	fmt.Print(doctorID, clinicID)
 	clinicDoctors, err := service.Repo.FetchDoctorClinicMappings(ctx, bson.M{"clinicID": clinicID, "doctorID": doctorID})
 	if err != nil {
-		return &structs.IAppError{
+		return "", "", "", 0, &structs.IAppError{
 			Message:    "Failed to Search Clinic",
 			Reason:     err.Error(),
 			StatusCode: http.StatusInternalServerError,
 			ErrorObj:   err,
-		}, "", "", "", 0
+		}
 	}
 
 	if len(clinicDoctors) == 0 {
-		return &structs.IAppError{
+		return "", "", "", 0, &structs.IAppError{
 			Message:    "Failed to Search Clinic",
 			Reason:     "This Doctor and clinic mapping doesnt exist",
 			StatusCode: http.StatusNotFound,
 			ErrorObj:   errors.New("this mapping doesnt exist"),
-		}, "", "", "", 0
+		}
 	}
 
 	clinicDoctor := clinicDoctors[0]
@@ -204,15 +204,15 @@ func (service *clinicService) ClinicDoctorDetails(ctx context.Context, clinicID 
 		}
 	}
 	if !appointmentDayPossible {
-		return &structs.IAppError{
+		return "", "", "", 0, &structs.IAppError{
 			Message:    "Appointment Day Requested Not Possible",
 			Reason:     "This doctor is not available on this day",
 			StatusCode: http.StatusBadRequest,
 			ErrorObj:   errors.New("this doctor is not available on this day"),
-		}, "", "", "", 0
+		}
 	}
 
-	return nil, clinicDoctor.DoctorName, clinicDoctor.ClinicName, clinicDoctor.ClinicAddress, clinic.MaxAppointments
+	return clinicDoctor.DoctorName, clinicDoctor.ClinicName, clinicDoctor.ClinicAddress, clinic.MaxAppointments, nil
 
 }
 
