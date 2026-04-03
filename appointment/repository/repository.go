@@ -27,68 +27,46 @@ func NewRepository(db *mongo.Database) *Repository {
 var _ interfaces.IRepository = (*Repository)(nil)
 
 func (r *Repository) AddAppointment(ctx context.Context, clinicMaxAppointments int, appointmentDetails models.Appointment) (int, error) {
-
 	//here first update slot document using upsert to ensure if it is not present create it if present updates its slots booked by 1
-	session, err := r.db.Client().StartSession()
-	if err != nil {
-		return 0, err
+	slotFilter := bson.D{
+		{Key: "bookingDate", Value: appointmentDetails.AppointmentDate},
+		{Key: "doctorID", Value: appointmentDetails.DoctorID},
+		{Key: "clinicID", Value: appointmentDetails.ClinicID},
+		{Key: "slotsBooked", Value: bson.M{
+			"$lt": clinicMaxAppointments,
+		}},
 	}
-	defer session.EndSession(ctx)
 
-	//this is the transaction function which will contain db operations logic which must be executed in single operation
-	transactionFn := func(sessCtx mongo.SessionContext) (any, error) {
-		slotFilter := bson.D{
+	updateQuery := bson.D{
+		{Key: "$inc", Value: bson.D{
+			{Key: "slotsBooked", Value: 1},
+		}},
+		{Key: "$setOnInsert", Value: bson.D{
 			{Key: "bookingDate", Value: appointmentDetails.AppointmentDate},
 			{Key: "doctorID", Value: appointmentDetails.DoctorID},
 			{Key: "clinicID", Value: appointmentDetails.ClinicID},
-			{Key: "slotsBooked", Value: bson.M{
-				"$lt": clinicMaxAppointments,
-			}},
-		}
-
-		updateQuery := bson.D{
-			{Key: "$inc", Value: bson.D{
-				{Key: "slotsBooked", Value: 1},
-			}},
-			{Key: "$setOnInsert", Value: bson.D{
-				{Key: "bookingDate", Value: appointmentDetails.AppointmentDate},
-				{Key: "doctorID", Value: appointmentDetails.DoctorID},
-				{Key: "clinicID", Value: appointmentDetails.ClinicID},
-			}},
-		}
-
-		//create the update options to update slot first then get its slotsBooked and assign it to current appointment as slot
-		updateOptions := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
-		slotUpdationRes := r.db.Collection("Slot").FindOneAndUpdate(sessCtx, slotFilter, updateQuery, updateOptions)
-		var slotUpdated models.Slot
-		if err := slotUpdationRes.Decode(&slotUpdated); err != nil {
-			return nil, err
-		}
-
-		//here get the updated slotsBooked and set it in appointment details it will represent the slot for this appointment
-		appointmentDetails.Slot = slotUpdated.SlotsBooked
-
-		//now save the appointment also
-		_, err := r.db.Collection("Appointment").InsertOne(sessCtx, appointmentDetails)
-		if err != nil {
-			return nil, err
-		}
-
-		return appointmentDetails, nil
+		}},
 	}
 
-	res, transactionErr := session.WithTransaction(ctx, transactionFn)
-	if transactionErr != nil {
-		return 0, transactionErr
+	//create the update options to update slot first then get its slotsBooked and assign it to current appointment as slot
+	updateOptions := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	slotUpdationRes := r.db.Collection("Slot").FindOneAndUpdate(ctx, slotFilter, updateQuery, updateOptions)
+	var slotUpdated models.Slot
+	if err := slotUpdationRes.Decode(&slotUpdated); err != nil {
+		return 0, err
 	}
 
-	//now try to convert res into appointment model
-	appointmentCreated, ok := res.(models.Appointment)
-	if !ok {
-		return 0, errors.New("failed to return appointment Created")
+	//here get the updated slotsBooked and set it in appointment details it will represent the slot for this appointment
+	appointmentDetails.Slot = slotUpdated.SlotsBooked
+
+	//now save the appointment also
+	_, err := r.db.Collection("Appointment").InsertOne(ctx, appointmentDetails)
+	if err != nil {
+		return 0, err
 	}
 
-	return appointmentCreated.Slot, nil
+	return appointmentDetails.Slot, nil
+
 }
 
 func (r *Repository) FetchAppointments(ctx context.Context, filters bson.M) ([]models.Appointment, error) {
