@@ -8,6 +8,7 @@ import (
 	"github.com/AlladinDev/AlShifa/appointment/interfaces"
 	"github.com/AlladinDev/AlShifa/structs"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -41,4 +42,12 @@ func (b *ClinicBridge) DoctorClinicMappingExists(ctx context.Context, clinicID p
 
 func (b *ClinicBridge) FetchMaxAppointments(ctx context.Context, clinicID primitive.ObjectID) (int, *structs.IAppError) {
 	return b.clinicService.FetchMaxAppointments(ctx, clinicID)
+}
+
+func (b *ClinicBridge) GetClinicIDIfExists(ctx context.Context, filters bson.M) (ID primitive.ObjectID, error *structs.IAppError) {
+	return b.clinicService.GetClinicIDIfExists(ctx, filters)
+}
+
+func (b *ClinicBridge) GetClinicIDByReceptionist(ctx context.Context, receptionistID primitive.ObjectID) (clinicID primitive.ObjectID, error *structs.IAppError) {
+	return b.clinicService.GetClinicIDByReceptionist(ctx, receptionistID)
 }

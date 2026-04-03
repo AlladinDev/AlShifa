@@ -24,6 +24,12 @@ type IRepository interface {
 	FetchDoctorClinicMappings(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error)
 	ClinicExists(ctx context.Context, clinicID primitive.ObjectID) error
 	DoctorExists(ctx context.Context, doctorID primitive.ObjectID) error
+	FetchDoctorProfile(ctx context.Context, filter bson.M) (*models.Doctor, error)
+	GetPlanDetails(ctx context.Context, planID primitive.ObjectID) (*models.ClinicPlan, error)
 	FetchMaxAppointments(ctx context.Context, clinicID primitive.ObjectID) (int, error)
+	DeductClinicWallet(ctx context.Context, amountToDeduct int, clinicID primitive.ObjectID) error
+	GetClinicIDIfExists(ctx context.Context, filters bson.M) (ID primitive.ObjectID, err error)
+	GetClinicIDByReceptionist(ctx context.Context, receptionistID primitive.ObjectID) (clinicID primitive.ObjectID, err error)
 	DoctorClinicMappingExists(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID) error
+	FetchPlanDetails(ctx context.Context, filter bson.M) (*models.ClinicPlan, error)
 }

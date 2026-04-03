@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/AlladinDev/AlShifa/appointment/interfaces"
-	"github.com/AlladinDev/AlShifa/appointment/models"
+	"github.com/AlladinDev/AlShifa/constants"
 	"github.com/AlladinDev/AlShifa/structs"
 	"github.com/AlladinDev/AlShifa/utils"
 
@@ -24,42 +24,77 @@ func NewController(service interfaces.IService) *Controller {
 	}
 }
 
-func (c *Controller) AddAppointment(res http.ResponseWriter, req *http.Request) {
+// func (c *Controller) AddAppointment(res http.ResponseWriter, req *http.Request) {
 
-	var appointmentDetails models.Appointment
-	if err := json.NewDecoder(req.Body).Decode(&appointmentDetails); err != nil {
-		_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppError{
-			Message:    "Invalid Appointment Details",
-			Reason:     "json details are invalid",
-			ErrorObj:   err,
-			StatusCode: http.StatusBadRequest,
-		})
-		return
-	}
-	ctx := req.Context()
+// 	var appointmentDetails sharedModels.Appointment
+// 	if err := json.NewDecoder(req.Body).Decode(&appointmentDetails); err != nil {
+// 		_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppError{
+// 			Message:    "Invalid Appointment Details",
+// 			Reason:     "json details are invalid",
+// 			ErrorObj:   err,
+// 			StatusCode: http.StatusBadRequest,
+// 		})
+// 		return
+// 	}
+// 	ctx := req.Context()
 
-	//now do some validations
+// 	//now do some validations
 
-	//now call service layer
-	slot, err := c.service.AddAppointment(ctx, appointmentDetails)
-	if err != nil {
-		_ = utils.WriteResponse(res, err.StatusCode, err)
-		return
-	}
+// 	//now call service layer
+// 	slot, err := c.service.AddAppointment(ctx, appointmentDetails)
+// 	if err != nil {
+// 		_ = utils.WriteResponse(res, err.StatusCode, err)
+// 		return
+// 	}
 
-	_ = utils.WriteResponse(res, http.StatusCreated, structs.IAppSuccess{
-		Message:    "Appointment Booked Successfully",
-		Data:       slot,
-		StatusCode: http.StatusCreated,
-	})
+// 	_ = utils.WriteResponse(res, http.StatusCreated, structs.IAppSuccess{
+// 		Message:    "Appointment Booked Successfully",
+// 		Data:       slot,
+// 		StatusCode: http.StatusCreated,
+// 	})
 
-}
+// }
 
 func (c *Controller) FetchAppointments(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
+
+	//get the userid and user type from ctx passed by jwt middleware
+	userTypeAny := req.Context().Value(constants.KeyUserRole)
+
+	userType, ok := userTypeAny.(string)
+	if !ok {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppError{
+			Message:    "Invalid User Type",
+			Reason:     "Invalid UserType",
+			StatusCode: http.StatusBadRequest,
+			ErrorObj:   nil,
+		})
+		return
+	}
+
+	//now get the userid also
+	userIDAny := req.Context().Value(constants.KeyUserID)
+	userIDErr, userID := utils.ParseUserID(userIDAny)
+	if userIDErr != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppError{
+			Message:    "Invalid UserID",
+			Reason:     userIDErr.Error(),
+			StatusCode: http.StatusBadRequest,
+			ErrorObj:   nil,
+		})
+		return
+	}
+
 	paramsPassed := req.URL.Query()
 
 	filters := bson.M{}
+
+	//add some default filters like userid and usertype so that only associated user or clinic and see its own related appointments
+
+	filters["userID"] = userID
+	filters["userType"] = userType
+
+	//get the userID because a user is allowed to see only his appointments
 
 	_ = utils.TransformParamIDS(paramsPassed, filters)
 	appointments, err := c.service.FetchAppointments(ctx, filters)

@@ -15,6 +15,8 @@ import (
 	structs "github.com/AlladinDev/AlShifa/structs"
 	utils "github.com/AlladinDev/AlShifa/utils"
 
+	dtos "github.com/AlladinDev/AlShifa/dtos"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -83,8 +85,7 @@ func (controller *Controller) Registerclinic(res http.ResponseWriter, req *http.
 }
 
 func (controller *Controller) Searchclinic(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
-	defer cancel()
+	ctx := req.Context()
 
 	// Parse query parameters
 	params := req.URL.Query()
@@ -291,25 +292,67 @@ func (controller *Controller) RegisterDoctor(res http.ResponseWriter, req *http.
 	}
 
 	//now do some validations here
-
-	//extract doctorID here from req.context
-	doctorIDAny := req.Context().Value(constants.KeyUserID)
-	doctorMongoDBErr, doctorMongoDBID := utils.ParseUserID(doctorIDAny)
-	if doctorMongoDBErr != nil {
+	validationErrs := validators.ValidateDoctor(doctorDetails)
+	if validationErrs != nil {
 		_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppError{
-			Message:    "Invalid doctorID",
-			Reason:     doctorMongoDBErr.Error(),
-			ErrorObj:   doctorMongoDBErr,
+			Message:    "Invalid Details",
+			Reason:     "Invalid details",
+			ErrorObj:   validationErrs,
 			StatusCode: http.StatusBadRequest,
 		})
 		return
 	}
-	//now add this doctorMongoDBID to doctor details
-	doctorDetails.ID = doctorMongoDBID
 
 	if registrationErr := controller.Service.RegisterDoctor(ctx, doctorDetails); registrationErr != nil {
-		_ = utils.WriteResponse(res, http.StatusBadRequest, registrationErr)
+		_ = utils.WriteResponse(res, registrationErr.StatusCode, registrationErr)
 		return
 	}
+
+	_ = utils.WriteResponse(res, http.StatusCreated, structs.IAppSuccess{
+		Message:    "Doctor Registered Successfully",
+		StatusCode: http.StatusCreated,
+		Data:       nil,
+	})
+
+}
+
+func (controller *Controller) LoginDoctor(res http.ResponseWriter, req *http.Request) {
+	var loginDetails dtos.LoginEmailPasswordDTO
+
+	if err := json.NewDecoder(req.Body).Decode(&loginDetails); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppError{
+			Message:    "Invalid details",
+			Reason:     err.Error(),
+			StatusCode: http.StatusBadRequest,
+			ErrorObj:   err,
+		})
+		return
+	}
+
+	//do some validation
+	loginDetailsErrors := utils.ValidateEmailPassword(loginDetails)
+	if loginDetailsErrors != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppError{
+			Message:    "InCorrect  details",
+			Reason:     "Incorrect details",
+			StatusCode: http.StatusBadRequest,
+			ErrorObj:   loginDetailsErrors,
+		})
+		return
+	}
+
+	ctx := req.Context()
+
+	token, err := controller.Service.LoginDoctor(ctx, loginDetails)
+	if err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppSuccess{
+		Message:    "Login Successfull",
+		Data:       utils.FormatBearerToken(token),
+		StatusCode: http.StatusOK,
+	})
 
 }

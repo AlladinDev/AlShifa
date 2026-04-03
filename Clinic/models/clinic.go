@@ -12,6 +12,7 @@ type SeasonTimingDetails struct {
 	End   time.Time `json:"end" bson:"end"`     // 24 bytes
 	Name  string    `json:"name" bson:"name"`   // 16 bytes
 }
+
 type WalletDetails struct {
 	AvailableBalance int64 `json:"availableBalance" bson:"availableBalance"`
 }
@@ -26,7 +27,7 @@ type Clinic struct {
 	Mobile          int64                 `json:"mobile,omitempty" bson:"mobile"`               // 8 bytes (int64 for phone numbers)
 	Pincode         int32                 `json:"pincode,omitempty" bson:"pincode"`             // 4 bytes
 	Wallet          *WalletDetails        `json:"wallet,omitempty" bson:"wallet"`
-	PlanType        string                `json:"planType,omitempty" bson:"planType"`
+	PlanID          primitive.ObjectID    `json:"planID" bson:"planID"`
 	MaxAppointments int                   `json:"maxAppointments" bson:"maxAppointments"`
 	Verified        bool                  `json:"verified" bson:"verified"`
 	OwnerID         primitive.ObjectID    `json:"ownerID" bson:"ownerID"`

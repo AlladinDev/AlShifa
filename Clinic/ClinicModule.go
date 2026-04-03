@@ -43,18 +43,30 @@ func InitialiseclinicModule(app *internals.App) {
 	//get the controller
 	controller := controller.NewController(service, validators.ValidateAddDoctorToclinicDetails)
 
+	//-------------------Routes start here----------------------------//
+
+	//doctor routes
+	//healthcheck for doctor routes
+	utils.HealthCheck("doctor", app.Mux)
+
+	//doctor routes without middlewares
+	app.Get("/doctors", controller.SearchDoctor)
+	app.Post("/doctor", controller.RegisterDoctor)
+	app.Post("/doctor/login", controller.LoginDoctor)
+
 	// Clinic routes
 	app.Route("/clinic", func(clinic chi.Router) {
-		clinic.Get("/details", controller.Searchclinic)
+		//healthcheck for clinic routes
+		utils.HealthCheck("clinic", app.Mux)
 
+		clinic.Get("/", controller.Searchclinic)
 		clinic.Group(func(c chi.Router) {
+
 			c.Use(middleware.JwtAuthmiddleware)
 			// c.Use(middleware.RoleGuardmiddleware(controller.Registerclinic, utils.RoleclinicOwner))
 			clinic.Get("/doctors", controller.FetchDoctorWithItsclinics)
 			//c.With(middleware.RoleGuardmiddleware(constants.RoleclinicOwner)).Post("/register", controller.Registerclinic)
 			c.Post("/addDoctor", controller.AddDoctorToclinic)
-			c.Get("/doctor", controller.SearchDoctor)
-			c.Post("/doctor", controller.RegisterDoctor)
 			c.Post("/addDoctor/verify", controller.VerifyAddDoctorToclinicOtp)
 		})
 

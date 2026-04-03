@@ -21,9 +21,9 @@ type Appointment struct {
 
 	// 12 bytes each
 	ID       primitive.ObjectID `json:"id" bson:"_id"`
-	ClinicID primitive.ObjectID `json:"clinic" bson:"clinic"`
-	UserID   primitive.ObjectID `json:"user" bson:"user"`
-	DoctorID primitive.ObjectID `json:"doctor" bson:"doctor"`
+	ClinicID primitive.ObjectID `json:"clinicID" bson:"clinicID"`
+	UserID   primitive.ObjectID `json:"userID" bson:"userID"`
+	DoctorID primitive.ObjectID `json:"doctorID" bson:"doctorID"`
 
 	// 8 bytes
 	PatientMobile int `json:"patientMobile" bson:"patientMobile"`

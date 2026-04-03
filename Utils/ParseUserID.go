@@ -15,12 +15,12 @@ func ParseUserID(userID any) (error, primitive.ObjectID) {
 	fmt.Println("userid receuved is", userID)
 	userIDStr, ok := userID.(string)
 	if !ok {
-		return errors.New("Invalid UserID failed to parse it into string"), primitive.NilObjectID
+		return errors.New("invalid UserID failed to parse it into string"), primitive.NilObjectID
 	}
 
 	userMongoDBID, mongoErr := primitive.ObjectIDFromHex(userIDStr)
 	if mongoErr != nil {
-		return errors.New("Invalid UserID type expected mongodbID"), primitive.NilObjectID
+		return errors.New("invalid UserID type expected mongodbID"), primitive.NilObjectID
 	}
 
 	return nil, userMongoDBID

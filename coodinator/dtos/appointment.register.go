@@ -1,4 +1,5 @@
-package models
+// Package dtos provides dtos for coodinator service
+package dtos
 
 import (
 	"time"
@@ -6,7 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Appointment struct {
+type BookAppointment struct {
 	// 24 bytes each
 	AppointmentDate time.Time `json:"appointmentDate" bson:"appointmentDate"`
 	CreatedAt       time.Time `json:"registrationDate" bson:"registrationDate"`

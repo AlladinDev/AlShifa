@@ -12,6 +12,7 @@ import (
 	interfaces "github.com/AlladinDev/AlShifa/clinic/interfaces"
 	"github.com/AlladinDev/AlShifa/clinic/models"
 	"github.com/AlladinDev/AlShifa/constants"
+	"github.com/AlladinDev/AlShifa/dtos"
 	appInterfaces "github.com/AlladinDev/AlShifa/interfaces"
 	structs "github.com/AlladinDev/AlShifa/structs"
 	utils "github.com/AlladinDev/AlShifa/utils"
@@ -85,6 +86,33 @@ func (service *clinicService) FetchMaxAppointments(ctx context.Context, clinicID
 	return maxAppointments, nil
 }
 
+func (service *clinicService) GetClinicIDByReceptionist(ctx context.Context, receptionistID primitive.ObjectID) (clinicID primitive.ObjectID, err *structs.IAppError) {
+	receptionistID, repoErr := service.Repo.GetClinicIDByReceptionist(ctx, receptionistID)
+	if repoErr != nil {
+		return primitive.NilObjectID, &structs.IAppError{
+			Message:    "Failed to fetch ClinicID",
+			Reason:     repoErr.Error(),
+			StatusCode: http.StatusInternalServerError,
+			ErrorObj:   repoErr,
+		}
+	}
+
+	return receptionistID, nil
+}
+
+func (service *clinicService) GetClinicIDIfExists(ctx context.Context, filter bson.M) (clinicID primitive.ObjectID, err *structs.IAppError) {
+	id, idErr := service.Repo.GetClinicIDIfExists(ctx, filter)
+	if idErr != nil {
+		return primitive.NilObjectID, &structs.IAppError{
+			Message:    "Failed to fetch receptionist id",
+			Reason:     idErr.Error(),
+			ErrorObj:   idErr,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	return id, nil
+}
 func (service *clinicService) DoctorClinicMappingExists(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID) *structs.IAppError {
 	if err := service.Repo.DoctorClinicMappingExists(ctx, clinicID, doctorID); err != nil {
 		return &structs.IAppError{
@@ -136,17 +164,18 @@ func (service *clinicService) ClinicDoctorDetails(ctx context.Context, clinicID 
 	clinic, clinicSearchErr := service.Repo.SearchclinicByID(ctx, clinicID)
 	if clinicSearchErr != nil {
 		return &structs.IAppError{
-			Message:    "Appointment  Booking Failed",
+			Message:    "Failed to Search Clinic",
 			Reason:     clinicSearchErr.Error(),
 			StatusCode: http.StatusInternalServerError,
 			ErrorObj:   clinicSearchErr,
 		}, "", "", "", 0
 	}
 
+	fmt.Print(doctorID, clinicID)
 	clinicDoctors, err := service.Repo.FetchDoctorClinicMappings(ctx, bson.M{"clinicID": clinicID, "doctorID": doctorID})
 	if err != nil {
 		return &structs.IAppError{
-			Message:    "Appointment Booking Failed",
+			Message:    "Failed to Search Clinic",
 			Reason:     err.Error(),
 			StatusCode: http.StatusInternalServerError,
 			ErrorObj:   err,
@@ -155,7 +184,7 @@ func (service *clinicService) ClinicDoctorDetails(ctx context.Context, clinicID 
 
 	if len(clinicDoctors) == 0 {
 		return &structs.IAppError{
-			Message:    "Appointment Booking Failed",
+			Message:    "Failed to Search Clinic",
 			Reason:     "This Doctor and clinic mapping doesnt exist",
 			StatusCode: http.StatusNotFound,
 			ErrorObj:   errors.New("this mapping doesnt exist"),
@@ -185,6 +214,41 @@ func (service *clinicService) ClinicDoctorDetails(ctx context.Context, clinicID 
 
 	return nil, clinicDoctor.DoctorName, clinicDoctor.ClinicName, clinicDoctor.ClinicAddress, clinic.MaxAppointments
 
+}
+
+func (service *clinicService) DeductClinicMoneyForAppointment(ctx context.Context, clinicID primitive.ObjectID) error {
+	clinics, clinicSearchErr := service.Repo.Searchclinic(ctx, bson.M{"_id": clinicID})
+	if clinicSearchErr != nil {
+		return clinicSearchErr
+	}
+
+	if len(clinics) == 0 {
+		return errors.New("no clinic found with this id")
+	}
+	clinic := clinics[0]
+	//now check whether it has wallet or not
+	if clinic.Wallet == nil {
+		return errors.New("wallet not initialized for this clinic")
+	}
+
+	//here check if clinic has a plan attached or not
+	if clinic.PlanID == primitive.NilObjectID {
+		return errors.New("clinic doesnt have any plan yet")
+	}
+
+	//now get the plan details to check how much to deduct and whether this clinic has that amount or not
+	clinicPlan, planErr := service.Repo.GetPlanDetails(ctx, clinic.PlanID)
+
+	if planErr != nil {
+		return planErr
+	}
+
+	//now check its balance
+	if clinic.Wallet.AvailableBalance < int64(clinicPlan.AmountToDeduct) {
+		return errors.New("insufficient wallet balance")
+	}
+
+	return service.Repo.DeductClinicWallet(ctx, clinicPlan.AmountToDeduct, clinicID)
 }
 
 //AddDoctorToclinic function generate otp for adding doctor to clinic this process needs another function or handler to verify otp and then the process is completed
@@ -367,10 +431,27 @@ func (service *clinicService) VerifyAddDoctorToclinicOTP(ctx context.Context, ot
 func (service *clinicService) Registerclinic(ctx context.Context, ownerID primitive.ObjectID, clinicDetails models.Clinic) *structs.IAppError {
 	// set default values
 	clinicDetails.CreatedAt = time.Now().UTC()
-	clinicDetails.Wallet = nil
+	clinicDetails.Wallet = &models.WalletDetails{
+		AvailableBalance: 0,
+	}
 	clinicDetails.ID = primitive.NewObjectID()
-	clinicDetails.PlanType = utils.PlanPaid
+
+	//here get basic plan and add its id to clinnic
+	planDetails, planErr := service.Repo.FetchPlanDetails(ctx, bson.M{"type": constants.ClinicPlanBasic})
+	if planErr != nil {
+		return &structs.IAppError{
+			Message:    "Failed to register clinic",
+			Reason:     planErr.Error(),
+			StatusCode: http.StatusInternalServerError,
+			ErrorObj:   planErr,
+		}
+	}
+
+	//add planid to clinic
+	clinicDetails.PlanID = planDetails.ID
+
 	clinicDetails.OwnerID = ownerID
+
 	registrationErr := service.Repo.Registerclinic(ctx, ownerID, clinicDetails)
 	if registrationErr != nil {
 		fmt.Print(registrationErr)
@@ -406,6 +487,50 @@ func (service *clinicService) FetchDoctorClinicMappings(ctx context.Context, fil
 }
 
 func (service *clinicService) RegisterDoctor(ctx context.Context, doctorDetails models.Doctor) *structs.IAppError {
+	//check if this doctor already exists
+	existingDoctor, err := service.Repo.FetchDoctorProfile(ctx, bson.M{"$or": []bson.M{
+		{"email": doctorDetails.Email},
+		{"mobile": doctorDetails.Mobile},
+	}})
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			return &structs.IAppError{
+				Message:    "Doctor Registration Failed",
+				Reason:     err.Error(),
+				ErrorObj:   err,
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
+	}
+
+	if existingDoctor != nil {
+		return &structs.IAppError{
+			Message:    "Registration Failed",
+			Reason:     "Email or mobile Already Exists",
+			ErrorObj:   errors.New("doctor already exists"),
+			StatusCode: http.StatusConflict,
+		}
+	}
+
+	//hash the password first
+	hashedPassword, hashingErr := utils.HashPasswordArgon2id(doctorDetails.Password)
+	if hashingErr != nil {
+		return &structs.IAppError{
+			Message:    "Doctor Registration Failed",
+			Reason:     hashingErr.Error(),
+			ErrorObj:   hashingErr,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	//set password to hashed one
+	doctorDetails.Password = hashedPassword
+
+	//here add some defaults like id createdAt role
+	doctorDetails.CreatedAt = time.Now()
+	doctorDetails.Role = constants.RoleDoctor
+	doctorDetails.ID = primitive.NewObjectID()
+
 	if err := service.Repo.RegisterDoctor(ctx, doctorDetails); err != nil {
 		return &structs.IAppError{
 			Message:    "Doctor Registration Failed",
@@ -416,4 +541,52 @@ func (service *clinicService) RegisterDoctor(ctx context.Context, doctorDetails 
 	}
 
 	return nil
+}
+
+func (service *clinicService) LoginDoctor(ctx context.Context, loginDetails dtos.LoginEmailPasswordDTO) (string, *structs.IAppError) {
+	doctor, err := service.Repo.FetchDoctorProfile(ctx, bson.M{"email": loginDetails.Email})
+	if err != nil {
+		return "", &structs.IAppError{
+			Message:    "Login Failed",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	passwordMatches, matchingErr := utils.VerifyPasswordArgon2id(loginDetails.Password, doctor.Password)
+	if matchingErr != nil {
+		return "", &structs.IAppError{
+			Message:    "Login Failed",
+			Reason:     matchingErr.Error(),
+			ErrorObj:   matchingErr,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	if !passwordMatches {
+		return "", &structs.IAppError{
+			Message:    "Invalid email or password",
+			Reason:     "Invalid Details",
+			ErrorObj:   errors.New("invalid details"),
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	//now as ever detail is correct generate jwt token
+	token, tokenErr := utils.GenerateJWT(&constants.JwtCustomClaims{
+		UserID: doctor.ID.Hex(),
+		Role:   doctor.Role,
+	})
+
+	if tokenErr != nil {
+		return "", &structs.IAppError{
+			Message:    "Login Failed",
+			Reason:     tokenErr.Error(),
+			ErrorObj:   tokenErr,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	return token, nil
 }

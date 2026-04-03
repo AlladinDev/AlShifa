@@ -25,24 +25,26 @@ func ReturnNewRepository(db *mongo.Database) *Repository {
 var _ interfaces.IRepository = (*Repository)(nil)
 
 func (repo *Repository) RegisterUser(ctx context.Context, user models.User) error {
+
 	_, err := repo.DB.Collection("User").InsertOne(ctx, user)
 	if err != nil {
 		return err
 	}
 	return nil
 }
+func (repo *Repository) SearchUser(ctx context.Context, filter bson.M) (*models.User, error) {
+	res := repo.DB.Collection("User").FindOne(ctx, filter)
 
-func (repo *Repository) SearchUserByID(ctx context.Context, userID primitive.ObjectID) (*models.User, error) {
-	result := repo.DB.Collection("User").FindOne(ctx, bson.M{"_id": userID})
 	var user models.User
-	if err := result.Decode(&user); err != nil {
+	if err := res.Decode(&user); err != nil {
 		return nil, err
 	}
+
 	return &user, nil
 }
 
-func (repo *Repository) SearchUser(ctx context.Context, filter bson.M) (*models.User, error) {
-	result := repo.DB.Collection("User").FindOne(ctx, filter)
+func (repo *Repository) SearchUserByID(ctx context.Context, userID primitive.ObjectID) (*models.User, error) {
+	result := repo.DB.Collection("User").FindOne(ctx, bson.M{"_id": userID})
 	var user models.User
 	if err := result.Decode(&user); err != nil {
 		return nil, err

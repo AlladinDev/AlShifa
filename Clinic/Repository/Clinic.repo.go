@@ -3,12 +3,14 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/AlladinDev/AlShifa/clinic/models"
+	"github.com/AlladinDev/AlShifa/constants"
 	"github.com/AlladinDev/AlShifa/structs"
 
 	interfaces "github.com/AlladinDev/AlShifa/clinic/interfaces"
@@ -56,8 +58,33 @@ func InitialiseIndexes(collection *mongo.Collection) error {
 	return nil
 }
 
+func (r *Repo) FetchDoctorProfile(ctx context.Context, filter bson.M) (*models.Doctor, error) {
+	res := r.DB.Collection("Doctor").FindOne(ctx, filter)
+
+	var doctor models.Doctor
+	if err := res.Decode(&doctor); err != nil {
+		return nil, err
+	}
+
+	return &doctor, nil
+}
+
+func (r *Repo) GetClinicIDIfExists(ctx context.Context, filters bson.M) (ID primitive.ObjectID, err error) {
+	options := options.FindOne().SetProjection(bson.M{"_id": 1})
+	res := r.DB.Collection("Clinic").FindOne(ctx, filters, options)
+	type Result struct {
+		ID primitive.ObjectID `bson:"_id"`
+	}
+	var dbRes Result
+	if err := res.Decode(&dbRes); err != nil {
+		return primitive.NilObjectID, nil
+	}
+
+	return dbRes.ID, nil
+}
+
 func (r *Repo) SearchclinicByID(ctx context.Context, clinicID primitive.ObjectID) (*models.Clinic, error) {
-	res := r.DB.Collection("clinic").FindOne(ctx, bson.M{"_id": clinicID})
+	res := r.DB.Collection("Clinic").FindOne(ctx, bson.M{"_id": clinicID})
 	var clinic models.Clinic
 	if err := res.Decode(&clinic); err != nil {
 		return nil, err
@@ -65,11 +92,34 @@ func (r *Repo) SearchclinicByID(ctx context.Context, clinicID primitive.ObjectID
 	return &clinic, nil
 }
 
+func (r *Repo) GetClinicIDByReceptionist(ctx context.Context, receptionistID primitive.ObjectID) (clinicID primitive.ObjectID, err error) {
+	type Result struct {
+		ID primitive.ObjectID `bson:"_id"`
+	}
+	var dbRes Result
+	res := r.DB.Collection("Clinic").FindOne(ctx, bson.M{"receptionistID": receptionistID})
+	if err := res.Decode(&dbRes); err != nil {
+		return primitive.NilObjectID, err
+	}
+
+	return dbRes.ID, nil
+}
+
 func (r *Repo) Registerclinic(
 	ctx context.Context,
 	ownerID primitive.ObjectID,
 	clinic models.Clinic,
 ) error {
+
+	//find the basic plan for clinics
+	basicPlanRes := r.DB.Collection("ClinicPlan").FindOne(ctx, bson.M{"type": constants.ClinicPlanBasic})
+	var plan models.ClinicPlan
+	if err := basicPlanRes.Decode(&plan); err != nil {
+		return err
+	}
+
+	//add the plan id to clinic payload to attach plan to it
+	clinic.PlanID = plan.ID
 
 	session, err := r.DB.Client().StartSession()
 	if err != nil {
@@ -111,6 +161,16 @@ func (r *Repo) Registerclinic(
 	return err
 }
 
+func (r *Repo) GetPlanDetails(ctx context.Context, planID primitive.ObjectID) (*models.ClinicPlan, error) {
+	res := r.DB.Collection("ClinicPlan").FindOne(ctx, bson.M{"_id": planID})
+	var planDetails models.ClinicPlan
+	if err := res.Decode(&planDetails); err != nil {
+		return nil, err
+	}
+
+	return &planDetails, nil
+}
+
 func (r *Repo) Searchclinic(ctx context.Context, filter bson.M) ([]models.Clinic, error) {
 
 	cursor, err := r.DB.Collection("Clinic").Find(ctx, filter)
@@ -146,10 +206,24 @@ func (r *Repo) AddDoctorToclinic(ctx context.Context, clinicDetails models.Clini
 	return err
 }
 
+func (r *Repo) DeductClinicWallet(ctx context.Context, amountToDeduct int, clinicID primitive.ObjectID) error {
+	filter := bson.M{"_id": clinicID, "wallet.availableBalance": bson.M{"$gte": amountToDeduct}}
+	res, err := r.DB.Collection("Clinic").UpdateOne(ctx, filter, bson.M{"$inc": bson.M{"wallet.availableBalance": -amountToDeduct}})
+	if err != nil {
+		return err
+	}
+
+	if res.ModifiedCount == 0 {
+		return errors.New("failed to deduct clinic wallet")
+	}
+
+	return nil
+}
+
 // FetchDoctorClinicMappings function clinic with its associated doctors using filters
 func (r *Repo) FetchDoctorClinicMappings(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error) {
 
-	cursor, err := r.DB.Collection("clinicDoctor").Find(ctx, filter)
+	cursor, err := r.DB.Collection("ClinicDoctor").Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -258,4 +332,14 @@ func (r *Repo) FetchMaxAppointments(ctx context.Context, clinicID primitive.Obje
 	}
 
 	return clinic.MaxAppointments, nil
+}
+
+func (r *Repo) FetchPlanDetails(ctx context.Context, filter bson.M) (*models.ClinicPlan, error) {
+	res := r.DB.Collection("ClinicPlan").FindOne(ctx, filter)
+	var planDetails models.ClinicPlan
+	if err := res.Decode(&planDetails); err != nil {
+		return nil, err
+	}
+
+	return &planDetails, nil
 }

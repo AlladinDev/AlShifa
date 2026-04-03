@@ -26,7 +26,8 @@ func InitialiseUserModule(app *internals.App) {
 
 	controller := controller.ReturnNewController(service)
 	app.Route("/user", func(r chi.Router) {
-		r.With(middleware.JwtAuthmiddleware).Post("/", controller.RegisterUser)
+		r.Post("/", controller.RegisterUser)
+		r.Post("/login", controller.Login)
 		r.With(middleware.JwtAuthmiddleware).Get("/details", controller.SearchUser)
 	})
 

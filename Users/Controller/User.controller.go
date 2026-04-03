@@ -2,8 +2,11 @@
 package controller
 
 import (
+	"fmt"
+
 	"github.com/AlladinDev/AlShifa/constants"
 	structs "github.com/AlladinDev/AlShifa/structs"
+	"github.com/AlladinDev/AlShifa/users/dtos"
 	interfaces "github.com/AlladinDev/AlShifa/users/interfaces"
 	models "github.com/AlladinDev/AlShifa/users/models"
 	validators "github.com/AlladinDev/AlShifa/users/validators"
@@ -82,4 +85,30 @@ func (controller *UserController) SearchUser(res http.ResponseWriter, req *http.
 	}
 
 	_ = utils.WriteResponse(res, http.StatusOK, user)
+}
+
+func (controller *UserController) Login(res http.ResponseWriter, req *http.Request) {
+	var loginDetails dtos.LoginDTO
+	ctx := req.Context()
+	if err := json.NewDecoder(req.Body).Decode(&loginDetails); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppError{
+			Message:    "Invalid json Details",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	token, err := controller.Service.Login(ctx, loginDetails)
+	if err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
+		Message:    "Login Successfull",
+		StatusCode: http.StatusOK,
+		Data:       fmt.Sprintf("BEARER %s", token),
+	})
 }

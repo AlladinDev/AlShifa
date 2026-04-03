@@ -1,15 +1,16 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/AlladinDev/AlShifa/appointment"
+	"github.com/AlladinDev/AlShifa/auth"
 	clinic "github.com/AlladinDev/AlShifa/clinic"
 	constants "github.com/AlladinDev/AlShifa/constants"
+	coordinator "github.com/AlladinDev/AlShifa/coodinator"
 	internals "github.com/AlladinDev/AlShifa/internals"
 	alShifaMiddlewares "github.com/AlladinDev/AlShifa/middleware"
 	"github.com/AlladinDev/AlShifa/owner"
@@ -18,8 +19,6 @@ import (
 
 	chiMiddlewares "github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
-
-	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -36,14 +35,17 @@ func main() {
 	}
 	addr := ":" + port
 
-	//create chi router
+	//create chi router parent router
 	chiRouter := chi.NewRouter()
 
 	//--------------------apply middlewares----------------
 	//timeout middewares
-	chiRouter.Use(chiMiddlewares.Timeout(constants.RequestTimeout))
-	chiRouter.Use(alShifaMiddlewares.Cors)
+	chiRouter.Use(chiMiddlewares.Logger)
 	chiRouter.Use(chiMiddlewares.Recoverer)
+	chiRouter.Use(alShifaMiddlewares.Cors)
+	chiRouter.Use(chiMiddlewares.Timeout(constants.RequestTimeout))
+
+	//all route handler to see if request is coming or  not
 
 	//call monogodb connect function
 	mongoClient, mongoErr := internals.ConnectMongo(os.Getenv("MONGODB_URL"))
@@ -53,61 +55,40 @@ func main() {
 
 	defer internals.Disconnect(mongoClient)
 
-	//redis initialization
-	//get redis url
-	redisURL := os.Getenv("REDIS_URL")
-	if redisURL == "" {
-		log.Fatal("REDIS url is missing in env file")
-	}
-
-	//get redis username
-	redisUsername := os.Getenv("REDIS_USERNAME")
-	if redisUsername == "" {
-		log.Fatal("redisUsername is missing in env file")
-	}
-
-	//get redis passowrd
-	redisUserPassword := os.Getenv("REDIS_PASSWORD")
-	if redisUserPassword == "" {
-		log.Fatal("REDIS userPassword is missing in env file")
-	}
-
 	//create redis client with all credientials
-	redisInstance := *redis.NewClient(&redis.Options{
-		Addr:     redisURL,
-		Password: redisUserPassword,
-		Username: redisUsername,
-	})
-
-	// Ping the Redis server to verify the connection
-	_, err := redisInstance.Ping(context.Background()).Result()
-	if err != nil {
-		log.Fatalf("Could not connect to Redis: %v", err)
+	redisInstance, redisConnErr := internals.ConnectToRedis()
+	if redisConnErr != nil {
+		log.Fatalf("Could not connect to Redis: %v", redisConnErr)
 	}
 
-	fmt.Println("REDIS Connected successfully")
-	///----------------------redis initialization end
+	// version router this will be v1 router for api versioning
+	v1 := chi.NewRouter()
+	chiRouter.Mount("/v1", v1)
 
 	appStore := internals.NewApp().
-		WithDB(mongoClient.Database("github.com/AlladinDev/AlShifa")).
+		WithDB(mongoClient.Database("AlShifa")).
 		WithDI().
-		WithRedis(&redisInstance).
-		WithServer(chiRouter)
-
-	//add central middlewares
+		WithRedis(redisInstance).
+		WithServer(v1)
 
 	//initialise modules
 	clinic.InitialiseclinicModule(appStore)
-
 	users.InitialiseUserModule(appStore)
 	owner.InitOwner(appStore)
-
+	auth.InitAuth(appStore)
 	appointment.InitAppointmentModule(appStore)
 
-	fmt.Println("Server Started with dependency injection system initialized")
+	//at end initialise coordinator module
+	coordinator.InitCoordinator(appStore)
 
 	//print services registered in di for debugging
 	appStore.DI.PrintServicesInDI()
+
+	//now version apis
+
+	utils.HealthCheck("alshifa", v1)
+
+	//append prefix to this router such as v1
 
 	if err := http.ListenAndServe(addr, chiRouter); err != nil {
 		fmt.Print("Failed to start server on error is", err)

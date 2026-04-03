@@ -24,10 +24,14 @@ func InitAppointmentModule(app *internals.App) {
 	}
 
 	service := service.NewService(repository, clinicModule)
+
+	//add this service to di
+	app.DI.AddService(constants.NameAppointmentService, service)
+
 	controller := controller.NewController(service)
 
-	app.Route("/appointment", func(r chi.Router) {
-		r.With(middleware.JwtAuthmiddleware).Post("/", controller.AddAppointment)
+	app.Route("/appointments", func(r chi.Router) {
+		//r.With(middleware.JwtAuthmiddleware).Post("/", controller.AddAppointment)
 		r.With(middleware.JwtAuthmiddleware).Put("/", controller.UpdateAppointmentStatus)
 		r.With(middleware.JwtAuthmiddleware).Get("/", controller.FetchAppointments)
 	})

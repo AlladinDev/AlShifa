@@ -4,6 +4,7 @@ package repository
 import (
 	"github.com/AlladinDev/AlShifa/appointment/interfaces"
 	"github.com/AlladinDev/AlShifa/appointment/models"
+	sharedModels "github.com/AlladinDev/AlShifa/models"
 
 	"context"
 	"errors"
@@ -26,7 +27,7 @@ func NewRepository(db *mongo.Database) *Repository {
 
 var _ interfaces.IRepository = (*Repository)(nil)
 
-func (r *Repository) AddAppointment(ctx context.Context, clinicMaxAppointments int, appointmentDetails models.Appointment) (int, error) {
+func (r *Repository) AddAppointment(ctx context.Context, clinicMaxAppointments int, appointmentDetails sharedModels.Appointment) (int, error) {
 
 	//here first update slot document using upsert to ensure if it is not present create it if present updates its slots booked by 1
 	session, err := r.db.Client().StartSession()
@@ -83,7 +84,7 @@ func (r *Repository) AddAppointment(ctx context.Context, clinicMaxAppointments i
 	}
 
 	//now try to convert res into appointment model
-	appointmentCreated, ok := res.(models.Appointment)
+	appointmentCreated, ok := res.(sharedModels.Appointment)
 	if !ok {
 		return 0, errors.New("failed to return appointment Created")
 	}
@@ -91,14 +92,14 @@ func (r *Repository) AddAppointment(ctx context.Context, clinicMaxAppointments i
 	return appointmentCreated.Slot, nil
 }
 
-func (r *Repository) FetchAppointments(ctx context.Context, filters bson.M) ([]models.Appointment, error) {
+func (r *Repository) FetchAppointments(ctx context.Context, filters bson.M) ([]sharedModels.Appointment, error) {
 	cursor, err := r.db.Collection("Appointment").Find(ctx, filters)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	var appointments []models.Appointment
+	var appointments []sharedModels.Appointment
 	if err := cursor.All(ctx, &appointments); err != nil {
 		return nil, err
 	}

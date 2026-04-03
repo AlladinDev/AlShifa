@@ -26,9 +26,14 @@ const (
 	KeyMobile                contextKey = "Mobile"
 	StatusAppointmentPending            = "pending"
 
-	NameUserService   = "UserService"
-	NameClinicService = "ClinicService"
-	NameDoctorService = "DoctorService"
+	NameUserService        = "UserService"
+	NameClinicService      = "ClinicService"
+	NameDoctorService      = "DoctorService"
+	NameAppointmentService = "AppointmentService"
+
+	//clinic plans
+	ClinicPlanBasic  = "basic"
+	ClinicSilverPlan = "silver"
 
 	RequestTimeout = 2 * time.Second
 	APIVERSION     = "/v1"
@@ -40,10 +45,11 @@ const (
 	CacheTTL                = OTPExpiry
 
 	//Roles
-	RoleUser        = "User"
-	RoleAdmin       = "Admin"
-	RoleDoctor      = "Doctor"
-	RoleclinicOwner = "clinicOwner"
+	RoleUser               = "User"
+	RoleAdmin              = "Admin"
+	RoleDoctor             = "Doctor"
+	RoleclinicOwner        = "ClinicOwner"
+	RoleClinicReceptionist = "ClinicReceptionist"
 
 	//Plans
 	PlanPaid = "Paid"
@@ -51,6 +57,16 @@ const (
 
 	//jwtprefix
 	JwtPrefix = "BEARER "
+
+	//some length constants for validation
+	MaxNameLength           = 20
+	MaxAddressLength        = 50
+	MaxQualificationsLength = 100
+	MaxAge                  = 80
+	MinAge                  = 15
+	MaxPasswordLength       = 30
+	MinPasswordLength       = 8
+	MaxEmailLength          = 20
 )
 
 var RolesAllowed = []string{RoleclinicOwner, RoleDoctor, RoleUser, RoleAdmin}
