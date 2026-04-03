@@ -18,12 +18,12 @@ func InitAppointmentModule(app *internals.App) {
 
 	//get the clinic module from di
 	clinicModuleAny, _ := app.DI.GetService(constants.NameClinicService)
-	clinicModule := clinicModuleAny.(interfaces.IClinicModule)
-	// if !ok {
-	// 	panic("Interface conversion  failed in appointment module when getting clinic module from di")
-	// }
+	clinicModule, ok := clinicModuleAny.(interfaces.IClinicModule)
+	if !ok {
+		panic("Interface conversion  failed in appointment module when getting clinic module from di")
+	}
 
-	service := service.NewService(repository, clinicModule)
+	service := service.NewService(repository, clinicModule, app.DB.Client())
 
 	//add this service to di
 	app.DI.AddService(constants.NameAppointmentService, service)

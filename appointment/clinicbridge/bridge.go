@@ -51,3 +51,7 @@ func (b *ClinicBridge) GetClinicIDIfExists(ctx context.Context, filters bson.M) 
 func (b *ClinicBridge) GetClinicIDByReceptionist(ctx context.Context, receptionistID primitive.ObjectID) (clinicID primitive.ObjectID, error *structs.IAppError) {
 	return b.clinicService.GetClinicIDByReceptionist(ctx, receptionistID)
 }
+
+func (b *ClinicBridge) DeductClinicMoneyForAppointment(ctx context.Context, clinicID primitive.ObjectID) error {
+	return b.clinicService.DeductClinicMoneyForAppointment(ctx, clinicID)
+}

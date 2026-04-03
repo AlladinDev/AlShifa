@@ -2,6 +2,7 @@
 package service
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -16,17 +17,20 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Service struct {
 	repo          interfaces.IRepository
 	clinicService interfaces.IClinicModule
+	mongoClient   *mongo.Client
 }
 
-func NewService(repo interfaces.IRepository, clinicService interfaces.IClinicModule) *Service {
+func NewService(repo interfaces.IRepository, clinicService interfaces.IClinicModule, mongoClient *mongo.Client) *Service {
 	return &Service{
 		repo:          repo,
 		clinicService: clinicService,
+		mongoClient:   mongoClient,
 	}
 }
 
@@ -49,13 +53,47 @@ func (s *Service) AddAppointment(ctx context.Context, appointmentDetails models.
 	appointmentDetails.CreatedAt = time.Now()
 	appointmentDetails.ID = primitive.NewObjectID()
 
-	//now call the repo to save data
-	slotNumber, appointmentSavingErr := s.repo.AddAppointment(ctx, maxAppointments, appointmentDetails)
-	if appointmentSavingErr != nil {
+	//start mongodb session
+	session, sessionErr := s.mongoClient.StartSession()
+	if sessionErr != nil {
 		return 0, &structs.IAppError{
 			Message:    "Failed to book appointment",
-			Reason:     appointmentSavingErr.Error(),
-			ErrorObj:   appointmentSavingErr,
+			Reason:     sessionErr.Error(),
+			ErrorObj:   sessionErr,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	txnFn := func(sessCtx mongo.SessionContext) (any, error) {
+		//now call the repo to save data
+		slotNumber, appointmentSavingErr := s.repo.AddAppointment(sessCtx, maxAppointments, appointmentDetails)
+		if appointmentSavingErr != nil {
+			return 0, appointmentSavingErr
+		}
+
+		if err := s.clinicService.DeductClinicMoneyForAppointment(sessCtx, appointmentDetails.ClinicID); err != nil {
+			return 0, err
+		}
+
+		return slotNumber, nil
+	}
+
+	transactionRes, transactionErr := session.WithTransaction(ctx, txnFn)
+	if transactionErr != nil {
+		return 0, &structs.IAppError{
+			Message:    "Failed to book appointment",
+			Reason:     transactionErr.Error(),
+			ErrorObj:   transactionErr,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	slotNumber, ok := transactionRes.(int)
+	if !ok {
+		return 0, &structs.IAppError{
+			Message:    "Failed to Book Appointment",
+			Reason:     "failed to convert slotNumber any to int",
+			ErrorObj:   errors.New("failed to convert slotNumber any to int"),
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
