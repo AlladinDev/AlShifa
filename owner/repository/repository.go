@@ -3,6 +3,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/AlladinDev/AlShifa/owner/interfaces"
 	"github.com/AlladinDev/AlShifa/owner/models"
@@ -40,9 +41,10 @@ func (r *Repository) GetOwnerDetails(ctx context.Context, filter bson.M) (*model
 }
 
 func (r *Repository) GetOwnerByID(ctx context.Context, ownerID primitive.ObjectID) (*models.Owner, error) {
+	fmt.Println(ownerID)
 	res := r.db.Collection("Owner").FindOne(ctx, bson.M{"_id": ownerID})
 	var owner models.Owner
-	if err := res.Decode(&res); err != nil {
+	if err := res.Decode(&owner); err != nil {
 		return nil, err
 	}
 

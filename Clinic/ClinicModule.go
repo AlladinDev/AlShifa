@@ -56,6 +56,8 @@ func InitialiseclinicModule(app *internals.App) {
 
 	// Clinic routes
 	app.Route("/clinic", func(clinic chi.Router) {
+		app.Post("/", controller.Registerclinic)
+
 		//healthcheck for clinic routes
 		utils.HealthCheck("clinic", app.Mux)
 

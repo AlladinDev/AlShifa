@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/AlladinDev/AlShifa/constants"
+	"github.com/AlladinDev/AlShifa/dtos"
 	"github.com/AlladinDev/AlShifa/owner/interfaces"
 	"github.com/AlladinDev/AlShifa/owner/models"
 	"github.com/AlladinDev/AlShifa/owner/validators"
@@ -93,7 +94,7 @@ func (c *Controller) GetOwnerByID(res http.ResponseWriter, req *http.Request) {
 	}
 
 	_ = utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
-		Message:    "Failed to fetch owner details",
+		Message:    "Owner Details Fetched Successfully",
 		Data:       owner,
 		StatusCode: http.StatusOK,
 	})
@@ -133,4 +134,32 @@ func (c *Controller) GetOwnerDetails(res http.ResponseWriter, req *http.Request)
 		Data:       owner,
 	})
 
+}
+
+func (c *Controller) LoginOwner(res http.ResponseWriter, req *http.Request) {
+	var loginDetails dtos.LoginEmailPasswordDTO
+
+	if err := json.NewDecoder(req.Body).Decode(&loginDetails); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, structs.IAppError{
+			Message:    "Invalid Json Details",
+			Reason:     "Invalid json ",
+			ErrorObj:   err,
+			StatusCode: http.StatusBadRequest,
+		})
+	}
+
+	//now do some validations
+
+	ctx := req.Context()
+	token, err := c.service.LoginOwner(ctx, loginDetails)
+	if err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
+		Message:    "Login Successfull",
+		Data:       utils.FormatBearerToken(token),
+		StatusCode: http.StatusOK,
+	})
 }

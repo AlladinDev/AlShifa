@@ -35,8 +35,7 @@ func NewController(svr interfaces.IService, validateAddDoctorToclinicFn func(det
 
 func (controller *Controller) Registerclinic(res http.ResponseWriter, req *http.Request) {
 
-	ctx, cancel := context.WithTimeout(req.Context(), utils.RequestTimeout)
-	defer cancel()
+	ctx := req.Context()
 
 	var clinicRegistrationDetails models.Clinic
 	if err := json.NewDecoder(req.Body).Decode(&clinicRegistrationDetails); err != nil {

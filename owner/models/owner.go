@@ -1,3 +1,4 @@
+// Package models provides models for owner module
 package models
 
 import (
@@ -7,11 +8,13 @@ import (
 )
 
 type Owner struct {
-	CreatedAt time.Time          `json:"createdAt,omitzero" bson:"createdAt"` // 24 bytes
-	Name      string             `json:"name,omitempty" bson:"name"`          // 16 bytes
-	Address   string             `json:"address,omitempty" bson:"address"`    // 16 bytes
-	Gender    string             `json:"gender,omitempty" bson:"gender"`      // 16 bytes
-	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-	Role      string             `json:"role,omitempty" bson:"role"` // 12 bytes (placed near end)
-	Mobile    int64              `json:"mobile,omitempty" bson:"mobile"`
+	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"` // 24 bytes
+	Name      string             `json:"name" bson:"name"`           // 16 bytes
+	Address   string             `json:"address" bson:"address"`     // 16 bytes
+	Gender    string             `json:"gender" bson:"gender"`       // 16 bytes
+	ID        primitive.ObjectID `json:"_id" bson:"_id"`
+	Role      string             `json:"role" bson:"role"` // 12 bytes (placed near end)
+	Mobile    string              `json:"mobile" bson:"mobile"`
+	Password  string             `json:"password" bson:"password"`
+	Email     string             `json:"email" bson:"email"`
 }

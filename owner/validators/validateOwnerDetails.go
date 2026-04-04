@@ -56,7 +56,7 @@ func ValidateOwnerDetails(owner *models.Owner) map[string]string {
 	}
 
 	// Mobile
-	if owner.Mobile < 0 || owner.Mobile > 9999999999 {
+	if len(owner.Mobile) != 10 {
 		errors["mobile"] = InvalidMobileNumberMsg
 	}
 
