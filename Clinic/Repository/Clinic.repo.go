@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlladinDev/AlShifa/clinic/dtos"
 	"github.com/AlladinDev/AlShifa/clinic/models"
 	"github.com/AlladinDev/AlShifa/constants"
 	"github.com/AlladinDev/AlShifa/structs"
@@ -236,6 +237,114 @@ func (r *Repo) FetchDoctorClinicMappings(ctx context.Context, filter bson.M) ([]
 
 	return doctorClinicMapping, nil
 
+}
+
+// ClinicWithDoctors function returns clinic with doctor details there
+func (r *Repo) ClinicWithDoctors(ctx context.Context, filter bson.M) ([]dtos.ClinicWithDoctors, error) {
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Clinic"},
+			{Key: "localField", Value: "clinicID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "clinicDetails"},
+		}}},
+
+		bson.D{{Key: "$unwind", Value: "$clinicDetails"}},
+
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Doctor"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "localField", Value: "doctorID"},
+			{Key: "as", Value: "doctorDetails"},
+		}}},
+
+		bson.D{{Key: "$unwind", Value: "$doctorDetails"}},
+
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: "$clinicID"},
+			{Key: "clinicDetails", Value: bson.D{
+				{Key: "$first", Value: "$clinicDetails"},
+			}},
+			{Key: "doctors", Value: bson.D{
+				{Key: "$push", Value: bson.D{
+					{Key: "$mergeObjects", Value: bson.A{
+						"$doctorDetails",
+						bson.D{{Key: "workingDays", Value: "$workingDays"}},
+						bson.D{{Key: "startTiming", Value: "$startTiming"}},
+						bson.D{{Key: "endTiming", Value: "$endTime"}}, // fixed
+					}},
+				}},
+			}},
+		}}},
+	}
+
+	cur, err := r.DB.Collection("ClinicDoctor").Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+
+	defer cur.Close(ctx)
+
+	var clinicWithDoctorDetails []dtos.ClinicWithDoctors
+	if err := cur.All(ctx, &clinicWithDoctorDetails); err != nil {
+		return nil, err
+	}
+
+	return clinicWithDoctorDetails, nil
+}
+
+func (r *Repo) DoctorWithClinics(ctx context.Context, filter bson.M) ([]dtos.DoctorWithClinics, error) {
+
+	pipeLine := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Doctor"},
+			{Key: "localField", Value: "doctorID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "doctorDetails"},
+		}}},
+
+		bson.D{{Key: "$unwind", Value: "$doctorDetails"}},
+
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Clinic"},
+			{Key: "localField", Value: "clinicID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "clinicDetails"},
+		}}},
+
+		bson.D{{Key: "$unwind", Value: "$clinicDetails"}},
+
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: "$doctorDetails._id"},
+			{Key: "doctorDetails", Value: bson.D{{Key: "$first", Value: "$doctorDetails"}}},
+			{Key: "clinics", Value: bson.D{
+				{Key: "$push", Value: bson.D{
+					{Key: "$mergeObjects", Value: bson.A{
+						"$clinicDetails",
+						bson.D{{Key: "workingDays", Value: "$workingDays"}},
+						bson.D{{Key: "startTiming", Value: "$startTiming"}},
+						bson.D{{Key: "endTiming", Value: "$endTime"}},
+					}},
+				}},
+			}},
+		}}},
+	}
+
+	cursor, err := r.DB.Collection("ClinicDoctor").Aggregate(ctx, pipeLine)
+	if err != nil {
+		return nil, err
+	}
+
+	defer cursor.Close(ctx)
+
+	var doctorWithClinics []dtos.DoctorWithClinics
+	if err := cursor.All(ctx, &doctorWithClinics); err != nil {
+		return nil, err
+	}
+	return doctorWithClinics, nil
 }
 
 //ClinicDoctorDetails function is for getting some details from clinic doctor mapping corresponding to clinicid and doctorid it returns some details but in primitive individual format

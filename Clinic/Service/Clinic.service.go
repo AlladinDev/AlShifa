@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	clinicDtos "github.com/AlladinDev/AlShifa/clinic/dtos"
 	interfaces "github.com/AlladinDev/AlShifa/clinic/interfaces"
 	"github.com/AlladinDev/AlShifa/clinic/models"
 	"github.com/AlladinDev/AlShifa/constants"
@@ -159,6 +160,33 @@ func (service *clinicService) SearchDoctor(ctx context.Context, filter bson.M) (
 	return &doctor[0], nil
 }
 
+func (service *clinicService) FetchClinicWithDoctors(ctx context.Context, filter bson.M) ([]clinicDtos.ClinicWithDoctors, *structs.IAppError) {
+	data, err := service.Repo.ClinicWithDoctors(ctx, filter)
+	if err != nil {
+		return nil, &structs.IAppError{
+			Message:    "Failed to fetch Clinic Details",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	return data, nil
+}
+
+func (service *clinicService) FetchDoctorWithClinics(ctx context.Context, filter bson.M) ([]clinicDtos.DoctorWithClinics, *structs.IAppError) {
+	res, err := service.Repo.DoctorWithClinics(ctx, filter)
+	if err != nil {
+		return nil, &structs.IAppError{
+			Message:    "Failed to fetch Doctor Details",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	return res, nil
+}
 func (service *clinicService) ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDateRequested time.Time) (doctorName string, clinicName string, clinicAddress string, maxAppointmentsAllowed int, error *structs.IAppError) {
 	//checkout whether this clinic exists or not
 	clinic, clinicSearchErr := service.Repo.SearchclinicByID(ctx, clinicID)

@@ -53,7 +53,8 @@ func InitialiseclinicModule(app *internals.App) {
 	app.Get("/doctors", controller.SearchDoctor)
 	app.Post("/doctor", controller.RegisterDoctor)
 	app.Post("/doctor/login", controller.LoginDoctor)
-
+	app.With(middleware.JwtAuthmiddleware).Get("/doctor/clinics", controller.FetchDoctorWithClinics)
+	app.With(middleware.JwtAuthmiddleware).Get("/clinic/doctors", controller.FetchClinicWithDoctors)
 	// Clinic routes
 	app.Route("/clinic", func(clinic chi.Router) {
 		app.Post("/", controller.Registerclinic)
@@ -65,8 +66,9 @@ func InitialiseclinicModule(app *internals.App) {
 		clinic.Group(func(c chi.Router) {
 
 			c.Use(middleware.JwtAuthmiddleware)
+
 			// c.Use(middleware.RoleGuardmiddleware(controller.Registerclinic, utils.RoleclinicOwner))
-			clinic.Get("/doctors", controller.FetchDoctorWithItsclinics)
+
 			//c.With(middleware.RoleGuardmiddleware(constants.RoleclinicOwner)).Post("/register", controller.Registerclinic)
 			c.Post("/addDoctor", controller.AddDoctorToclinic)
 			c.Post("/addDoctor/verify", controller.VerifyAddDoctorToclinicOtp)

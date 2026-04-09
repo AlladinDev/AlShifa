@@ -15,6 +15,30 @@ type ClinicDoctor struct {
 	StartTime     time.Time          `json:"startTiming" bson:"startTiming"`
 	EndTime       time.Time          `json:"endTime" bson:"endTime"`
 	DoctorName    string             `json:"doctorName" bson:"doctorName"`
+	Experience    int                `json:"experience"  bson:"experience"`
+	ClinicDetails *Clinic            `json:"clinicDetails" bson:"clinicDetails"`
+	WorkingAs     string             `json:"workingAs" bson:"workingAs"`
 	ClinicName    string             `json:"clinicName" bson:"clinicName"`
 	ClinicAddress string             `json:"clinicAddress" bson:"clinicAddress"`
 }
+
+/*
+   {doctorDetails:{
+   name,
+   address
+   qualifications
+   etc
+   },
+
+   clinics:[
+   {
+      workingDays
+      start end
+      clinic timing
+      clinic details
+   }
+   ]
+
+}
+
+*/

@@ -355,3 +355,47 @@ func (controller *Controller) LoginDoctor(res http.ResponseWriter, req *http.Req
 	})
 
 }
+
+func (controller *Controller) FetchDoctorWithClinics(res http.ResponseWriter, req *http.Request) {
+	queryParams := req.URL.Query()
+
+	ctx := req.Context()
+	var filters = bson.M{}
+
+	_ = utils.TransformParamIDS(queryParams, filters)
+
+	data, err := controller.Service.FetchDoctorWithClinics(ctx, filters)
+	if err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
+		Message:    "Details Fetched successfully",
+		StatusCode: http.StatusOK,
+		Data:       data,
+	})
+}
+
+func (controller *Controller) FetchClinicWithDoctors(res http.ResponseWriter, req *http.Request) {
+	queryParams := req.URL.Query()
+
+	var filters = bson.M{}
+
+	_ = utils.TransformParamIDS(queryParams, filters)
+
+	ctx := req.Context()
+
+	//now call the service method
+	data, err := controller.Service.FetchClinicWithDoctors(ctx, filters)
+	if err != nil {
+		_ = utils.WriteResponse(res, http.StatusOK, err)
+		return
+	}
+
+	_ = utils.WriteResponse(res, http.StatusOK, structs.IAppSuccess{
+		Message:    "Fetched Details Successfully",
+		Data:       data,
+		StatusCode: http.StatusOK,
+	})
+}

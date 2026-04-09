@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	clinicDtos "github.com/AlladinDev/AlShifa/clinic/dtos"
 	"github.com/AlladinDev/AlShifa/clinic/models"
 	"github.com/AlladinDev/AlShifa/dtos"
 	structs "github.com/AlladinDev/AlShifa/structs"
@@ -30,5 +31,7 @@ type IService interface {
 	GetClinicIDByReceptionist(ctx context.Context, receptionistID primitive.ObjectID) (clinicID primitive.ObjectID, err *structs.IAppError)
 	FetchMaxAppointments(ctx context.Context, clinicID primitive.ObjectID) (int, *structs.IAppError)
 	DeductClinicMoneyForAppointment(ctx context.Context, clinicID primitive.ObjectID) error
+	FetchClinicWithDoctors(ctx context.Context, filter bson.M) ([]clinicDtos.ClinicWithDoctors, *structs.IAppError)
+	FetchDoctorWithClinics(ctx context.Context, filter bson.M) ([]clinicDtos.DoctorWithClinics, *structs.IAppError)
 	DoctorClinicMappingExists(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID) *structs.IAppError
 }

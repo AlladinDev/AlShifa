@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/AlladinDev/AlShifa/clinic/dtos"
 	"github.com/AlladinDev/AlShifa/clinic/models"
 	structs "github.com/AlladinDev/AlShifa/structs"
 
@@ -21,6 +22,8 @@ type IRepository interface {
 	SearchclinicByID(ctx context.Context, clinicID primitive.ObjectID) (*models.Clinic, error)
 	ClinicDoctorDetails(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDate time.Time) (error *structs.IAppError, doctorName string, clinicName string, clinicAddress string)
 	FetchDoctors(ctx context.Context, filter bson.M) ([]models.Doctor, error)
+	ClinicWithDoctors(ctx context.Context, filter bson.M) ([]dtos.ClinicWithDoctors, error)
+	DoctorWithClinics(ctx context.Context, filter bson.M) ([]dtos.DoctorWithClinics, error)
 	FetchDoctorClinicMappings(ctx context.Context, filter bson.M) ([]models.ClinicDoctor, error)
 	ClinicExists(ctx context.Context, clinicID primitive.ObjectID) error
 	DoctorExists(ctx context.Context, doctorID primitive.ObjectID) error

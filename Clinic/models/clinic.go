@@ -24,7 +24,7 @@ type Clinic struct {
 	Name            string                `json:"name,omitempty"  bson:"name"`                  // 16 bytes
 	Address         string                `json:"address,omitempty" bson:"address"`             // 16 bytes
 	SeasonTimings   []SeasonTimingDetails `json:"seasonTimings,omitempty" bson:"seasonTimings"` // 8 bytes (pointer)
-	Mobile          int64                 `json:"mobile,omitempty" bson:"mobile"`               // 8 bytes (int64 for phone numbers)
+	Mobile          string                `json:"mobile,omitempty" bson:"mobile"`               // 8 bytes (int64 for phone numbers)
 	Pincode         int32                 `json:"pincode,omitempty" bson:"pincode"`             // 4 bytes
 	Wallet          *WalletDetails        `json:"wallet,omitempty" bson:"wallet"`
 	PlanID          primitive.ObjectID    `json:"planID" bson:"planID"`
