@@ -2,6 +2,7 @@ package validators
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -22,8 +23,9 @@ func ValidateDoctor(doc models.Doctor) map[string]string {
 	mobile := strings.TrimSpace(doc.Mobile)
 	address := strings.TrimSpace(doc.Address)
 	qualifications := strings.TrimSpace(doc.Qualifications)
-	experience := doc.Experience
+	experience := strings.TrimSpace(doc.Experience)
 	post := strings.TrimSpace(doc.Post)
+	workingAt := strings.TrimSpace(doc.WorkingAt)
 
 	// 👤 Name
 	if name == "" {
@@ -91,13 +93,23 @@ func ValidateDoctor(doc models.Doctor) map[string]string {
 		errors["post"] = "Post is required"
 	}
 
-	// 🧠 Experience
-	if experience == 0 || experience < 0 {
-		errors["experience"] = "Experience is required"
-	} else if experience > 100 { // e.g. "100 years"
-		errors["experience"] = "Experience is too large"
+	if workingAt == "" {
+		errors["workingAt"] = "workingAt cannot be empty"
 	}
 
+	// 🧠 Experience
+	if experience == "" {
+		errors["experience"] = "Experience cannot be empty"
+	}
+	experienceNumeric, err := strconv.Atoi(doc.Experience)
+	if err != nil {
+		errors["experience"] = "unexpected validation error"
+	}
+	if experienceNumeric < 1 {
+		errors["experience"] = "experience cannot be 0"
+	} else if experienceNumeric > 80 {
+		errors["experience"] = "experience cannot be more than 80"
+	}
 	if len(errors) == 0 {
 		return nil
 	}

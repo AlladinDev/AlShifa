@@ -533,7 +533,7 @@ func (service *clinicService) RegisterDoctor(ctx context.Context, doctorDetails 
 
 	if existingDoctor != nil {
 		return &structs.IAppError{
-			Message:    "Registration Failed",
+			Message:    "Email or mobile already exists",
 			Reason:     "Email or mobile Already Exists",
 			ErrorObj:   errors.New("doctor already exists"),
 			StatusCode: http.StatusConflict,

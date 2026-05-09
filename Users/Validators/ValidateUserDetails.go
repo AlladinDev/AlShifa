@@ -1,3 +1,4 @@
+// Package validators provides validation functions for user package
 package validators
 
 import (

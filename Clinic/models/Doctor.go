@@ -13,7 +13,7 @@ type Doctor struct {
 	Mobile         string             `json:"mobile" bson:"mobile"`
 	Qualifications string             `json:"qualifications,omitempty" bson:"qualifications"`
 	Address        string             `json:"address,omitempty" bson:"address"`
-	Experience     int8               `json:"experience" bson:"experience"`
+	Experience     string             `json:"experience" bson:"experience"`
 	Post           string             `json:"post" bson:"post"`
 	WorkingAt      string             `json:"workingAt,omitempty" bson:"workingAt"`
 	Role           string             `json:"role,omitempty" bson:"role"`

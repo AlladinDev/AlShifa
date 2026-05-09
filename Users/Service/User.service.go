@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
+	"time"
 
 	"github.com/AlladinDev/AlShifa/constants"
 	structs "github.com/AlladinDev/AlShifa/structs"
@@ -61,7 +61,25 @@ func (s *Service) AddUser(ctx context.Context, userDetails models.User) *structs
 		}
 	}
 
+	//create some defaults
+	userDetails.ID = primitive.NewObjectID()
+	userDetails.CreatedAt = time.Now()
+	userDetails.Role = constants.RoleUser
+
 	//hash the password
+	hashedPassword, hashingErr := utils.HashPasswordArgon2id(userDetails.Password)
+	if hashingErr != nil {
+		return &structs.IAppError{
+			Message:    "Registration Failed",
+			StatusCode: http.StatusInternalServerError,
+			Reason:     hashingErr.Error(),
+			ErrorObj:   hashingErr,
+		}
+	}
+
+	//override plain password with hashed one
+	userDetails.Password = hashedPassword
+
 	if err := s.repo.RegisterUser(ctx, userDetails); err != nil {
 		return &structs.IAppError{
 			Message:    "Registration Failed",
@@ -131,7 +149,7 @@ func (s *Service) Login(ctx context.Context, loginDetails dtos.LoginDTO) (string
 	token, tokenErr := utils.GenerateJWT(&constants.JwtCustomClaims{
 		UserID:     user.ID.Hex(),
 		Role:       user.Role,
-		Mobile:     strconv.Itoa(user.Mobile),
+		Mobile:     user.Mobile,
 		IsVerified: true,
 		Email:      user.Email,
 	})

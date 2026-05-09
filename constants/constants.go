@@ -66,7 +66,7 @@ const (
 	MinAge                  = 15
 	MaxPasswordLength       = 30
 	MinPasswordLength       = 8
-	MaxEmailLength          = 20
+	MaxEmailLength          = 40
 )
 
 var RolesAllowed = []string{RoleclinicOwner, RoleDoctor, RoleUser, RoleAdmin}
