@@ -48,6 +48,7 @@ func InitClinicDoctorMapping(di appInterface.IDependencyInjection) {
 
 	appStore.Route("/clinicdoctor", func(r chi.Router) {
 		r.With(middleware.JwtAuthmiddleware, middleware.RoleGuardmiddleware(constants.RoleclinicOwner)).Post("/", onboardingController.InitiateDoctorClinicOnboarding)
+		r.With(middleware.JwtAuthmiddleware, middleware.RoleGuardmiddleware(constants.RoleclinicOwner)).Post("/onboarding/verify", onboardingController.VerifyDoctorClinicOnboarding)
 	})
 
 }

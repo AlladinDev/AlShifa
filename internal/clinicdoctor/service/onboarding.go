@@ -450,9 +450,7 @@ func (s *Service) InitiateDoctorClinicOnboarding(
 //	        ↓
 //	Check expiry
 //	        ↓
-//	Hash submitted OTP
-//	        ↓
-//	Compare hashes
+//	Compare otp
 //	        ↓
 //	Resolve authenticated clinic
 //	        ↓
@@ -525,34 +523,11 @@ func (s *Service) VerifyDoctorClinicOnboarding(
 	}
 
 	// -------------------------------------------------------------------------
-	// 4. Hash the OTP supplied by the doctor.
-	// -------------------------------------------------------------------------
-	//
-	// We never compare or store plaintext OTPs.
-	//
-	//	Doctor's OTP
-	//	     ↓
-	//	    hash
-	//	     ↓
-	//	compare with stored OTPHash
-
-	incomingOTPHash, err := s.hashingFn(OTP)
-
-	if err != nil {
-		return &response.IAppError{
-			Message:    "Failed to verify OTP",
-			Reason:     err.Error(),
-			ErrorObj:   err,
-			StatusCode: http.StatusInternalServerError,
-		}
-	}
-
-	// -------------------------------------------------------------------------
 	// 5. Compare the submitted OTP with the stored OTP hash.
 	// -------------------------------------------------------------------------
 
 	otpMatches, err := s.hashComparisonFn(
-		incomingOTPHash,
+		OTP,
 		otpPayload.OTPHash,
 	)
 
@@ -661,8 +636,8 @@ func (s *Service) VerifyDoctorClinicOnboarding(
 
 	allowed, err := s.doctorModule.IsClinicAllowedToOnboardDoctor(
 		ctx,
-		otpPayload.Payload.DoctorID,
 		otpPayload.Payload.ClinicID,
+		otpPayload.Payload.DoctorID,
 	)
 	if err != nil {
 		return &response.IAppError{
@@ -676,8 +651,8 @@ func (s *Service) VerifyDoctorClinicOnboarding(
 	if !allowed {
 		return &response.IAppError{
 			Message:    "Onboarding not allowed; ask the doctor to enable it",
-			Reason:     err.Error(),
-			ErrorObj:   err,
+			Reason:     "doctor has not allowed the clinic to onboard him",
+			ErrorObj:   nil,
 			StatusCode: http.StatusForbidden,
 		}
 	}
@@ -742,6 +717,10 @@ func (s *Service) VerifyDoctorClinicOnboarding(
 	//	✓ Mapping does not already exist
 	//
 	// ONLY NOW do we create the relationship in the database.
+
+	//here set some default things like objectid createdat etc
+	otpPayload.Payload.ID = primitive.NewObjectID()
+	otpPayload.Payload.CreatedAt = time.Now()
 
 	if err := s.repo.RegisterDoctorClinicMapping(
 		ctx,

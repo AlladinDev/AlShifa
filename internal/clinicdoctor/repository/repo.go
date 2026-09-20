@@ -28,9 +28,9 @@ func (r *Repo) RegisterDoctorClinicMapping(ctx context.Context, details *models.
 	return err
 }
 
-//CheckClinicDoctorMappingExists function checks whether a clinic and doctor mapping exists if it doesnt return any error it means mapping exists if error is there it means otherwise like mapping dosnt exist or other db error
+// CheckClinicDoctorMappingExists function checks whether a clinic and doctor mapping exists if it doesnt return any error it means mapping exists if error is there it means otherwise like mapping dosnt exist or other db error
 func (r *Repo) CheckClinicDoctorMappingExists(ctx context.Context, doctorID primitive.ObjectID, clinicID primitive.ObjectID) (bool, error) {
-	if err := r.DB.Collection("ClinicDoctor").FindOne(ctx, bson.M{"clinicID": clinicID, "doctorID": doctorID}).Err(); err != nil {
+	if err := r.DB.Collection("ClinicDoctorMapping").FindOne(ctx, bson.M{"clinicID": clinicID, "doctorID": doctorID}).Err(); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return false, nil
 		}

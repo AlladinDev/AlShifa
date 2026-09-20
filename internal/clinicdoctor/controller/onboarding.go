@@ -69,7 +69,7 @@ func (c *onboardingController) InitiateDoctorClinicOnboarding(res http.ResponseW
 
 	//here set the token in cookies and set its name and expiry from constants package
 	http.SetCookie(res, &http.Cookie{
-		Name:     "onboarding_token",
+		Name:     constants.NameOTPToken,
 		Value:    token,
 		Secure:   true,
 		HttpOnly: true,
@@ -80,5 +80,57 @@ func (c *onboardingController) InitiateDoctorClinicOnboarding(res http.ResponseW
 		Message:    "onboarding initiated ,otp has been sent to doctor email",
 		Data:       nil,
 		StatusCode: http.StatusOK,
+	})
+}
+
+func (c *onboardingController) VerifyDoctorClinicOnboarding(res http.ResponseWriter, req *http.Request) {
+	//first here get the otp
+	var otpProvided string
+	if err := json.NewDecoder(req.Body).Decode(&otpProvided); err != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, &response.IAppError{
+			Message:    "Invalid json details",
+			Reason:     err.Error(),
+			ErrorObj:   err,
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	//now get the cookie also
+	authToken, cookieErr := req.Cookie(constants.NameOTPToken)
+	if cookieErr != nil {
+		_ = utils.WriteResponse(res, http.StatusBadRequest, &response.IAppError{
+			Message:    "Onboarding failed timeout resend onboarding request to continue",
+			Reason:     cookieErr.Error(),
+			ErrorObj:   cookieErr,
+			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	//now here get the owner id from req ctx
+	ownerIDAny := req.Context().Value(constants.KeyUserID)
+
+	ownerID, ownerIDErr := utils.ParseUserID(ownerIDAny)
+	if ownerIDErr != nil {
+		_ = utils.WriteResponse(res, http.StatusInternalServerError, &response.IAppError{
+			Message:    "Onboarding failed ownerid error ",
+			Reason:     ownerIDErr.Error(),
+			ErrorObj:   ownerIDErr,
+			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	if err := c.service.VerifyDoctorClinicOnboarding(req.Context(), otpProvided, authToken.Value, ownerID); err != nil {
+		_ = utils.WriteResponse(res, err.StatusCode, err)
+		return
+	}
+
+	///now as everything is ok return response showing that the mapping is successfull
+	_ = utils.WriteResponse(res, http.StatusCreated, &response.IAppSuccess{
+		Message:    "Doctor onboarded successfully",
+		Data:       nil,
+		StatusCode: http.StatusCreated,
 	})
 }

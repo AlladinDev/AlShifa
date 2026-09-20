@@ -20,5 +20,4 @@ type ClinicDoctorMapping struct {
 	ConsultationFees int                   `json:"consultationFees" bson:"consultationFees"`
 	Timings          []ConsultationTimings `json:"timings" bson:"timings"`
 	CreatedAt        time.Time             `json:"createdAt" bson:"createdAt"`
-	DoctorJoinedOn   time.Time             `json:"doctorJoinedOn" bson:"doctorJoinedOn"`
 }

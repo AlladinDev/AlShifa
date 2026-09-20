@@ -10,4 +10,10 @@ import (
 
 type IDoctorOnboarding interface {
 	InitiateDoctorClinicOnboarding(ctx context.Context, details *models.ClinicDoctorMapping, userID primitive.ObjectID) (string, *response.IAppError)
+	VerifyDoctorClinicOnboarding(
+		ctx context.Context,
+		OTP string,
+		onboardingToken string,
+		userID primitive.ObjectID,
+	) *response.IAppError
 }
