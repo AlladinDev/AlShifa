@@ -1,8 +1,6 @@
 package validators
 
 import (
-	"time"
-
 	"github.com/AlladinDev/AlShifa/internal/clinicdoctor/models"
 )
 
@@ -16,10 +14,6 @@ func ValidateClinicDoctorMapping(details *models.ClinicDoctorMapping) map[string
 
 	if details.ConsultationFees <= 0 {
 		errors["consultationFees"] = "consultation fees must be more than 0"
-	}
-
-	if details.DoctorJoinedOn.After(time.Now()) {
-		errors["doctorJoinedOn"] = "doctor joining date cannot be in future"
 	}
 
 	if details.AvailableOn == nil {

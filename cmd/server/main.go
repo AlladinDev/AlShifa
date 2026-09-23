@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/AlladinDev/AlShifa/internal/clinic"
 	"github.com/AlladinDev/AlShifa/internal/clinicdoctor"
@@ -28,7 +29,7 @@ import (
 )
 
 func main() {
-
+	start := time.Now()
 	//here use recover function inside defer
 	defer func() {
 		if err := recover(); err != nil {
@@ -97,6 +98,8 @@ func main() {
 	di.RegisterModule(constants.NameAppointmentModule, appointmentModule.InitAppointmentModule, appointmentModule.Dependendies)
 	di.RegisterModule(constants.NameOwnerModule, owner.InitOwner, owner.Dependencies)
 	di.Instantiatemodules()
+
+	log.Printf("INIT took %v", time.Since(start))
 
 	if err := http.ListenAndServe(addr, chiRouter); err != nil {
 		fmt.Print("Failed to start server on error is", err)

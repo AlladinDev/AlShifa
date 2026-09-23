@@ -42,11 +42,13 @@ func InitClinicDoctorMapping(di appInterface.IDependencyInjection) {
 	clinicDoctorService := service.NewService(repository)
 	onboardingService := service.NewOnboardingService(repository, appStore.EmailNotifier, utils.Encrypt, utils.Decrypt, utils.HashPasswordArgon2id, utils.GenerateOTP, clinicModule, doctorModule, utils.VerifyPasswordArgon2id)
 	onboardingController := controller.NewOnboardingController(onboardingService)
-
+	controller := controller.NewController(clinicDoctorService)
 	//add this clinic doctor service to di
 	di.AddService(constants.NameDoctorClinicMappingModule, clinicDoctorService)
 
 	appStore.Route("/clinicdoctor", func(r chi.Router) {
+		r.Get("/clinics", controller.FetchClinicsWithDoctors)
+		r.Get("/doctors", controller.FetchDoctorWithClinics)
 		r.With(middleware.JwtAuthmiddleware, middleware.RoleGuardmiddleware(constants.RoleclinicOwner)).Post("/", onboardingController.InitiateDoctorClinicOnboarding)
 		r.With(middleware.JwtAuthmiddleware, middleware.RoleGuardmiddleware(constants.RoleclinicOwner)).Post("/onboarding/verify", onboardingController.VerifyDoctorClinicOnboarding)
 	})

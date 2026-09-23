@@ -3,9 +3,11 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/AlladinDev/AlShifa/internal/clinicdoctor/dtos"
 	"github.com/AlladinDev/AlShifa/internal/clinicdoctor/interfaces"
 	"github.com/AlladinDev/AlShifa/internal/clinicdoctor/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -42,7 +44,7 @@ func (r *Repo) CheckClinicDoctorMappingExists(ctx context.Context, doctorID prim
 
 func (r *Repo) CheckAppointmentDatePossible(ctx context.Context, clinicID primitive.ObjectID, doctorID primitive.ObjectID, appointmentDate time.Time) (bool, error) {
 	var mapping models.ClinicDoctorMapping
-	if err := r.DB.Collection("ClinicDoctor").FindOne(ctx, bson.M{"clinicID": clinicID, "doctorID": doctorID}).Decode(&mapping); err != nil {
+	if err := r.DB.Collection("ClinicDoctorMapping").FindOne(ctx, bson.M{"clinicID": clinicID, "doctorID": doctorID}).Decode(&mapping); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return false, err
 		}
@@ -57,4 +59,140 @@ func (r *Repo) CheckAppointmentDatePossible(ctx context.Context, clinicID primit
 	}
 
 	return true, nil
+}
+
+func (r *Repo) FetchClinicWithDoctors(ctx context.Context, filter bson.M) ([]dtos.ClinicDoctorDTO, error) {
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Doctor"},
+			{Key: "localField", Value: "doctorID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "doctor"},
+		}}},
+
+		bson.D{{Key: "$unwind", Value: "$doctor"}},
+
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Clinic"},
+			{Key: "localField", Value: "clinicID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "clinic"},
+		}}},
+
+		bson.D{{Key: "$unwind", Value: "$clinic"}},
+
+		bson.D{{Key: "$match", Value: filter}},
+
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: "$clinic._id"},
+
+			{Key: "mappingId", Value: bson.D{
+				{Key: "$first", Value: "$_id"},
+			}},
+
+			{Key: "clinic", Value: bson.D{
+				{Key: "$first", Value: "$clinic"},
+			}},
+
+			{Key: "doctors", Value: bson.D{
+				{Key: "$push", Value: bson.D{
+					{Key: "mappingID", Value: "$_id"},
+					{Key: "_id", Value: "$doctor._id"},
+					{Key: "name", Value: "$doctor.name"},
+					{Key: "experience", Value: "$doctor.experience"},
+					{Key: "joinedOn", Value: "$createdAt"},
+					{Key: "photoUrl", Value: "$doctor.profilePhoto"},
+					{Key: "availableOn", Value: "$availableOn"},
+					{Key: "timings", Value: "$timings"},
+					{Key: "consultationFees", Value: "$consultationFees"},
+					{Key: "speciality", Value: "$doctor.field"},
+					{Key: "qualifications", Value: "$doctor.qualifications"},
+					{Key: "post", Value: "$doctor.post"},
+					{Key: "workingAt", Value: "$doctor.workingAt"},
+				}},
+			}},
+		}}},
+
+		bson.D{{Key: "$replaceWith", Value: bson.D{
+			{Key: "$mergeObjects", Value: bson.A{
+				"$clinic",
+				bson.D{
+					{Key: "mappingId", Value: "$mappingId"},
+					{Key: "doctors", Value: "$doctors"},
+				},
+			}},
+		}}},
+	}
+
+	cur, err := r.DB.Collection("ClinicDoctorMapping").Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+
+	defer cur.Close(ctx)
+
+	var clinicWithDoctors []dtos.ClinicDoctorDTO
+	fmt.Printf("%v", clinicWithDoctors)
+
+	if err := cur.All(ctx, &clinicWithDoctors); err != nil {
+		return nil, err
+	}
+
+	return clinicWithDoctors, nil
+}
+
+func (r *Repo) FetchDoctorWithClinics(ctx context.Context, filter bson.M) ([]dtos.DoctorWithClinic, error) {
+	pipeline := mongo.Pipeline{
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "Doctor"},
+				{Key: "localField", Value: "doctorID"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "doctor"},
+			}},
+
+			{Key: "$unwind", Value: "$doctor"},
+
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "Clinic"},
+				{Key: "localField", Value: "clinicID"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "clinic"},
+			}},
+
+			{Key: "$unwind", Value: "$clinic"},
+
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: "$doctor._id"},
+				{Key: "doctor", Value: bson.D{
+					{Key: "$first", Value: "$doctor"},
+				}},
+				{Key: "clinics", Value: bson.D{
+					{Key: "$push", Value: bson.D{
+						{Key: "name", Value: "$clinic.name"},
+						{Key: "address", Value: "$clinic.address"},
+						{Key: "consultationFees", Value: "$clinic.consultationFees"},
+						{Key: "availableOn", Value: "$clinic.availableOn"},
+						{Key: "timings", Value: "$clinic.timings"},
+						{Key: "departments", Value: "$clinic.departments"},
+						{Key: "joinedOn", Value: "$createdAt"},
+					}},
+				}},
+			}},
+		},
+	}
+
+	cur, err := r.DB.Collection("ClinicDoctorMapping").Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+
+	defer cur.Close(ctx)
+
+	var doctorWithClinics []dtos.DoctorWithClinic
+	if err := cur.All(ctx, &doctorWithClinics); err != nil {
+		return nil, err
+	}
+
+	return doctorWithClinics, nil
 }

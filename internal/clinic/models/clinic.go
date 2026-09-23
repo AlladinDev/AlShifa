@@ -30,6 +30,7 @@ type Clinic struct {
 	PlanID          primitive.ObjectID    `json:"planID" bson:"planID"`
 	MaxAppointments int                   `json:"maxAppointments" bson:"maxAppointments"`
 	Verified        bool                  `json:"verified" bson:"verified"`
+	Departments     []string              `json:"departments" bson:"departments"`
 	OwnerID         primitive.ObjectID    `json:"ownerID" bson:"ownerID"`
 	WorkingDays     []string              `json:"workingDays" bson:"workingDays"`
 }
