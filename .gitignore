@@ -1,3 +1,4 @@
 .env
 tmp
 vercel.json
+Dockerfile
