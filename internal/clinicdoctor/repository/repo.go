@@ -142,7 +142,11 @@ func (r *Repo) FetchClinicWithDoctors(ctx context.Context, filter bson.M) ([]dto
 }
 
 func (r *Repo) FetchDoctorWithClinics(ctx context.Context, filter bson.M) ([]dtos.DoctorWithClinic, error) {
+	if filter == nil {
+		filter = bson.M{}
+	}
 	pipeline := mongo.Pipeline{
+		// 1. Lookup Doctor
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "Doctor"},
@@ -150,18 +154,35 @@ func (r *Repo) FetchDoctorWithClinics(ctx context.Context, filter bson.M) ([]dto
 				{Key: "foreignField", Value: "_id"},
 				{Key: "as", Value: "doctor"},
 			}},
+		},
 
+		// 2. Unwind Doctor
+		bson.D{
 			{Key: "$unwind", Value: "$doctor"},
+		},
 
+		// 3. Lookup Clinic
+		bson.D{
 			{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "Clinic"},
 				{Key: "localField", Value: "clinicID"},
 				{Key: "foreignField", Value: "_id"},
 				{Key: "as", Value: "clinic"},
 			}},
+		},
 
+		// 4. Unwind Clinic
+		bson.D{
 			{Key: "$unwind", Value: "$clinic"},
+		},
 
+		// 5. Match Filter
+		bson.D{
+			{Key: "$match", Value: filter},
+		},
+
+		// 6. Group Stage
+		bson.D{
 			{Key: "$group", Value: bson.D{
 				{Key: "_id", Value: "$doctor._id"},
 				{Key: "doctor", Value: bson.D{
@@ -169,13 +190,32 @@ func (r *Repo) FetchDoctorWithClinics(ctx context.Context, filter bson.M) ([]dto
 				}},
 				{Key: "clinics", Value: bson.D{
 					{Key: "$push", Value: bson.D{
+						{Key: "_id", Value: "$clinic._id"},
+						{Key: "mappingID", Value: "$_id"},
 						{Key: "name", Value: "$clinic.name"},
 						{Key: "address", Value: "$clinic.address"},
-						{Key: "consultationFees", Value: "$clinic.consultationFees"},
-						{Key: "availableOn", Value: "$clinic.availableOn"},
-						{Key: "timings", Value: "$clinic.timings"},
+						{Key: "consultationFees", Value: "$consultationFees"},
+						{Key: "availableOn", Value: "$availableOn"},
+						{Key: "doctorTimings", Value: "$timings"},
+						{Key: "workingDays", Value: "$clinic.workingDays"},
+						{Key: "seasonTimings", Value: "$clinic.seasonTimings"},
 						{Key: "departments", Value: "$clinic.departments"},
-						{Key: "joinedOn", Value: "$createdAt"},
+						{Key: "joinedAt", Value: "$createdAt"},
+					}},
+				}},
+			}},
+		},
+
+		// 7. Replace Root Stage
+		bson.D{
+			{Key: "$replaceRoot", Value: bson.D{
+				{Key: "newRoot", Value: bson.D{
+					{Key: "$mergeObjects", Value: bson.A{
+						"$doctor",
+						bson.D{
+							{Key: "_id", Value: "$_id"},
+							{Key: "clinics", Value: "$clinics"},
+						},
 					}},
 				}},
 			}},
