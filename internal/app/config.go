@@ -14,13 +14,14 @@ import (
 type ICache interfaces.Cache[string, []byte]
 type App struct {
 	*chi.Mux
-	DB            *mongo.Database
-	Redis         *redis.Client
-	Broker        interfaces.IMessageBroker
-	httpClint     *http.Client
-	ImageUploader interfaces.IImageUploader
-	EmailNotifier interfaces.INotifier
-	KVStore       ICache
+	DB              *mongo.Database
+	Redis           *redis.Client
+	Broker          interfaces.IMessageBroker
+	httpClint       *http.Client
+	ImageUploader   interfaces.IImageUploader
+	EmailNotifier   interfaces.INotifier
+	MobileNotififer interfaces.INotifier
+	KVStore         ICache
 }
 
 func NewApp() *App {
@@ -43,6 +44,10 @@ func (app *App) WithServer(mux *chi.Mux) *App {
 	return app
 }
 
+func (app *App) WithMobileNotification(notifier interfaces.INotifier) *App {
+	app.MobileNotififer = notifier
+	return app
+}
 func (app *App) WithDB(db *mongo.Database) *App {
 	app.DB = db
 	return app

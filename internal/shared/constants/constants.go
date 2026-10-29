@@ -46,6 +46,8 @@ const (
 	NameAppointmentBookingPaymentToken = "AppoinmentBookingAppointmentToken"
 	AppointmentInitiated               = "AppointmentInitiated"
 	IndianCurrencyCode                 = "INR"
+	ApiTxtURL                          = "ApiTxtURL"
+	ApiTxtAuthKey                      = "ApiTxtAuthKey"
 
 	AppointmentPending   = "Appointment_Pending"
 	AppointmentCompleted = "Appointment_Completed"

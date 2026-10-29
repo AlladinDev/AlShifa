@@ -4,7 +4,6 @@ package users
 import (
 	app "github.com/AlladinDev/AlShifa/internal/app"
 	"github.com/AlladinDev/AlShifa/internal/shared/constants"
-	"github.com/AlladinDev/AlShifa/internal/shared/emailnotifier"
 	appInterface "github.com/AlladinDev/AlShifa/internal/shared/interfaces"
 	"github.com/AlladinDev/AlShifa/internal/shared/utils"
 	controller "github.com/AlladinDev/AlShifa/internal/users/controller"
@@ -18,16 +17,19 @@ var Dependencies = []string{constants.NameAppStore}
 
 func InitialiseUserModule(di appInterface.IDependencyInjection) {
 	appStoreAny, _ := di.GetService(constants.NameAppStore)
+
 	appStore, ok := appStoreAny.(*app.App)
 	if !ok {
 		panic("tried to get appstore from di in user module but failed")
 	}
+
+	mobileNotifier := appStore.MobileNotififer
 	repository := repository.NewRepository(appStore.DB)
 
 	service := service.ReturnNewService(utils.GenerateOTP,
 		utils.HashPasswordArgon2id,
 		utils.Decrypt, utils.Encrypt,
-		emailnotifier.NewEmailNotifier(),
+		mobileNotifier,
 		utils.VerifyPasswordArgon2id,
 		utils.GenerateJWT, repository,
 	)

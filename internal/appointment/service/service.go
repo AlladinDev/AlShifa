@@ -157,7 +157,7 @@ func (s *Service) AddAppointment(ctx context.Context, userID primitive.ObjectID,
 	}
 
 	///now encrypt this token into json format
-	byteToken, jsonErr := json.Marshal(token)
+	_, jsonErr := json.Marshal(token)
 	if jsonErr != nil {
 		return 0, "", &response.IAppError{
 			Message:    "Appointment Booking Failed",
@@ -177,15 +177,16 @@ func (s *Service) AddAppointment(ctx context.Context, userID primitive.ObjectID,
 		}
 	}
 
-	//here save the message in kv store
-	if err := s.kvStore.Set(ctx, constants.AppointmentInitiated, byteToken, constants.AppointmentBookingPaymentExpiryTime*3); err != nil {
-		return 0, "", &response.IAppError{
-			Message:    "Appointment Booking Failed",
-			Reason:     err.Error(),
-			ErrorObj:   err,
-			StatusCode: http.StatusInternalServerError,
-		}
-	}
+	//to do here save this event in message broker
+	// //here save the message in kv store
+	// if err := s.kvStore.Set(ctx, constants.AppointmentInitiated, byteToken, constants.AppointmentBookingPaymentExpiryTime*3); err != nil {
+	// 	return 0, "", &response.IAppError{
+	// 		Message:    "Appointment Booking Failed",
+	// 		Reason:     err.Error(),
+	// 		ErrorObj:   err,
+	// 		StatusCode: http.StatusInternalServerError,
+	// 	}
+	// }
 
 	type TransactionRes struct {
 		SlotDocumentID          primitive.ObjectID `json:"slotDocumentID"`

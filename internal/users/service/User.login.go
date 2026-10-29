@@ -4,7 +4,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -60,15 +59,15 @@ func ReturnNewService(
 //
 // The complete flow is:
 //
-//	1. Generate a new OTP.
-//	2. Hash the generated OTP.
-//	3. Create an OTP payload containing:
-//	   - the hashed OTP,
-//	   - the expiration time,
-//	   - the user's mobile number.
-//	4. Encrypt the OTP payload.
-//	5. Send the plain OTP to the user's mobile number through the notifier.
-//	6. Return the encrypted payload.
+//  1. Generate a new OTP.
+//  2. Hash the generated OTP.
+//  3. Create an OTP payload containing:
+//     - the hashed OTP,
+//     - the expiration time,
+//     - the user's mobile number.
+//  4. Encrypt the OTP payload.
+//  5. Send the plain OTP to the user's mobile number through the notifier.
+//  6. Return the encrypted payload.
 //
 // The plain OTP itself is never returned to the caller. It is only included
 // in the notification sent to the user's mobile number.
@@ -132,13 +131,13 @@ func ReturnNewService(
 //
 // Security considerations:
 //
-//	- The plain OTP is never returned from the service.
-//	- Only the hash of the OTP is placed inside the OTP payload.
-//	- The OTP payload is encrypted before being returned.
-//	- The plain OTP is sent only through the configured notification
-//	  mechanism.
-//	- If encryption fails, the OTP is not sent.
-//	- If notification fails, the encrypted payload is not returned.
+//   - The plain OTP is never returned from the service.
+//   - Only the hash of the OTP is placed inside the OTP payload.
+//   - The OTP payload is encrypted before being returned.
+//   - The plain OTP is sent only through the configured notification
+//     mechanism.
+//   - If encryption fails, the OTP is not sent.
+//   - If notification fails, the encrypted payload is not returned.
 //
 // The ordering of encryption before notification is intentional. This
 // ensures that the caller receives a usable verification payload only when
@@ -195,15 +194,15 @@ func (s *Service) InitiateLoginOTP(
 		}
 	}
 
-	// Construct the notification message containing the plain OTP.
-	//
-	// The plain OTP is intentionally used only here. It is not included in
-	// the encrypted payload in plain form and is not returned to the caller.
-	message := fmt.Sprintf(
-		"otp to verify your mobile number is %s valid for %s minutes",
-		otp,
-		constants.OTPExpiry,
-	)
+	// // Construct the notification message containing the plain OTP.
+	// //
+	// // The plain OTP is intentionally used only here. It is not included in
+	// // the encrypted payload in plain form and is not returned to the caller.
+	// message := fmt.Sprintf(
+	// 	"otp to verify your mobile number is %s valid for %s minutes",
+	// 	otp,
+	// 	constants.OTPExpiry,
+	// )
 
 	title := "Mobile number verification"
 	info := "dont share this otp with anyone "
@@ -215,7 +214,7 @@ func (s *Service) InitiateLoginOTP(
 	// the login request.
 	if err := s.notifier.SendNotification(
 		mobileNumber,
-		message,
+		otp,
 		title,
 		info,
 	); err != nil {
@@ -248,24 +247,24 @@ func (s *Service) InitiateLoginOTP(
 //
 // The function performs two main responsibilities:
 //
-//	1. Verify that the OTP supplied by the user is valid.
-//	2. Authenticate the user by finding or creating their user account and
-//	   generating a JWT login token.
+//  1. Verify that the OTP supplied by the user is valid.
+//  2. Authenticate the user by finding or creating their user account and
+//     generating a JWT login token.
 //
 // The OTP verification flow is:
 //
-//	1. Decrypt the login cookie.
-//	2. Deserialize the decrypted data into an OTPPayload.
-//	3. Check whether the OTP has expired.
-//	4. Compare the supplied OTP with the stored OTP hash.
-//	5. Create the initial JWT claims using the verified mobile number.
-//	6. Find an existing user using the mobile number.
-//	7. If the user exists, use the existing user's ID and email.
-//	8. If the user does not exist, create a new user containing the
-//	   verified mobile number and a newly generated ID.
-//	9. Put the appropriate user ID and email into the JWT claims.
-//	10. Generate the signed JWT.
-//	11. Return the JWT login token.
+//  1. Decrypt the login cookie.
+//  2. Deserialize the decrypted data into an OTPPayload.
+//  3. Check whether the OTP has expired.
+//  4. Compare the supplied OTP with the stored OTP hash.
+//  5. Create the initial JWT claims using the verified mobile number.
+//  6. Find an existing user using the mobile number.
+//  7. If the user exists, use the existing user's ID and email.
+//  8. If the user does not exist, create a new user containing the
+//     verified mobile number and a newly generated ID.
+//  9. Put the appropriate user ID and email into the JWT claims.
+//  10. Generate the signed JWT.
+//  11. Return the JWT login token.
 //
 // Existing user flow:
 //
@@ -331,10 +330,10 @@ func (s *Service) InitiateLoginOTP(
 //
 // The OTP is considered valid only when:
 //
-//	- the encrypted login cookie can be decrypted,
-//	- the decrypted data is a valid OTPPayload,
-//	- the OTP has not expired,
-//	- the supplied OTP matches the stored OTP hash.
+//   - the encrypted login cookie can be decrypted,
+//   - the decrypted data is a valid OTPPayload,
+//   - the OTP has not expired,
+//   - the supplied OTP matches the stored OTP hash.
 //
 // User handling:
 //
@@ -387,14 +386,14 @@ func (s *Service) InitiateLoginOTP(
 //
 // Security considerations:
 //
-//	- The plain OTP is not stored in the login cookie.
-//	- Only the OTP hash is stored in the OTP payload.
-//	- The OTP must be verified before accessing or creating a user account.
-//	- The OTP expiration time is checked before hash verification.
-//	- The mobile number used for account lookup comes from the decrypted
-//	  OTP payload rather than being independently supplied by the client.
-//	- A JWT is generated only after successful OTP verification and
-//	  successful user lookup or creation.
+//   - The plain OTP is not stored in the login cookie.
+//   - Only the OTP hash is stored in the OTP payload.
+//   - The OTP must be verified before accessing or creating a user account.
+//   - The OTP expiration time is checked before hash verification.
+//   - The mobile number used for account lookup comes from the decrypted
+//     OTP payload rather than being independently supplied by the client.
+//   - A JWT is generated only after successful OTP verification and
+//     successful user lookup or creation.
 //
 // Parameters:
 //

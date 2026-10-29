@@ -16,6 +16,8 @@ import (
 	"github.com/AlladinDev/AlShifa/internal/owner"
 	user "github.com/AlladinDev/AlShifa/internal/users"
 
+	apiTxt "github.com/AlladinDev/AlShifa/internal/apitxt"
+
 	app "github.com/AlladinDev/AlShifa/internal/app"
 	appointmentModule "github.com/AlladinDev/AlShifa/internal/appointment"
 	"github.com/AlladinDev/AlShifa/internal/shared/cloudinary"
@@ -80,11 +82,18 @@ func main() {
 	cloudinaryInstance := cloudinary.NewCloudinaryInstance()
 	di := dependencyinjection.NewDI()
 
+	///setup the notification module for mobile sms and whatsapp
+	mobileNotifier, err := apiTxt.SetupApiTxtModule()
+	if err != nil {
+		panic(err)
+	}
+
 	appStore := app.NewApp().
 		WithDB(mongoClient.Database("AlShifa")).
 		WithServer(v1).
 		WithEmailNotifier().
 		WithBroker(broker).
+		WithMobileNotification(mobileNotifier).
 		WithImageUploader(cloudinaryInstance)
 
 	//add the appstore to di because modules need it
